@@ -14,4 +14,5 @@ conp <- mongo(collection = "players", db = "wyscout", url = "mongodb://localhost
 confe <- mongo(collection = "flattened_events", db = "soccer", url = "mongodb://localhost")
 cone <- mongo(collection = "events", db = "soccer", url = "mongodb://localhost")
 
-allpasses_flat <- confe$find(query = '{"events.type.primary": "pass"}')
+allpasses <- confe$find(query = '{"events.type.primary": "pass"}')
+allshot <- confe$find(query = '{"events.type.primary": "shot"}')
