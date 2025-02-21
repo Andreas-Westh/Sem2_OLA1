@@ -27,6 +27,19 @@ library(rvest)
 top_5 <- head(teams_ranking$team,5)
 bottom_5 <- tail(teams_ranking$team,5)
 
+top_5_passes <- allpasses %>% filter(events$team$name %in% top_5)
+# FC Twente doesnt exist within the df, maybe data is from an older season?
+
+# Pass length
+hist(top_5_passes$events$pass$length)
+
+# Pass successrate
+
+# Secondary passtypes? 
+  # How many lead to assits
+  
+# Pass angle
+
 
 
 ##### 2. Hvordan er afleveringerne sidst i kampene i sæsonen 2021/2022, efter minut 80, sammenlignet med resten af kampen for henholdsvis den polske og hollandske liga? #####
