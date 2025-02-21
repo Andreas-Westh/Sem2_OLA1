@@ -28,10 +28,13 @@ top_5 <- head(teams_ranking$team,5)
 bottom_5 <- tail(teams_ranking$team,5)
 
 top_5_passes <- allpasses %>% filter(events$team$name %in% top_5)
+bottom_5_passes <- allpasses %>% filter(events$team$name %in% bottom_5)
+
 # FC Twente doesnt exist within the df, maybe data is from an older season?
 
 # Pass length
 hist(top_5_passes$events$pass$length)
+hist(bottom_5_passes$events$pass$length)
 
 # Pass successrate
 
