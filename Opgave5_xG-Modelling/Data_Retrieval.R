@@ -15,7 +15,7 @@ conp <- mongo(collection = "players", db = "NewWyscout", url = "mongodb://localh
 
 allpasses <- cong$find(query = '{"type.primary": "pass"}')
 allshot <- cong$find(query = '{"type.primary": "shot"}')
-
+allmatches <- conm$find(query = '{}')
 
 
 

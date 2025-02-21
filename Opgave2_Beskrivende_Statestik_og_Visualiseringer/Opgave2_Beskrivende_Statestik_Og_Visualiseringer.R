@@ -36,6 +36,8 @@ bottom_5_passes <- allpasses %>% filter(events$team$name %in% bottom_5)
 hist(top_5_passes$events$pass$length)
 hist(bottom_5_passes$events$pass$length)
 
+
+
 # Pass successrate
 
 # Secondary passtypes? 
