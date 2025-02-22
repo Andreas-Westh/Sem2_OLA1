@@ -17,7 +17,7 @@
 
 
 unique(allmatches$competitionId)
-
+# May not be relevant, can just filter on label
 allmatches <- allmatches %>%
   mutate(
     home_team = trimws(str_extract(label, "^[^-]+")),  # Extract and trim first team name
@@ -25,6 +25,20 @@ allmatches <- allmatches %>%
     home_goals = as.numeric(str_extract(label, "(?<=, )\\d+(?=-)")),  # First digit after comma
     away_goals = as.numeric(str_extract(label, "(?<=-)\\d+"))  # Number after hyphen
   )
+
+## Remove dead ball
+# free_kick, corner, penalty
+# throw_in gives problems
+dead_balls <- c("free_kick","corner","penalty")
+nrow(allshot_flat)
+# 21069 shots
+allshot_xG <- allshot_flat %>%
+  filter(
+    str_detect(type.secondary, "shot_after_") | 
+      !str_detect(possession.types, paste(dead_balls, collapse = "|"))
+  )
+nrow(allshot_xG)
+# 18419
 
 dutch_id <- 635
 polish_id <- 692
@@ -38,8 +52,18 @@ polish_matches_2122 <- polish_matches %>% filter(seasonId == 186215)
 polish_teams <- polish_matches_2122$home_team
 
 
-dutch_shot <- allshot_flat %>% filter(team.name %in% dutch_teams)
-polish_shot <- allshot_flat %>% filter(team.name %in% polish_teams)
+dutch_shot <- allshot_xG%>% filter(team.name %in% dutch_teams)
+polish_shot <- allshot_xG %>% filter(team.name %in% polish_teams)
+
+
+
+
+
+#### 5.2 ####
+
+
+
+
 
 
 
