@@ -196,6 +196,52 @@ rpart.plot(tree_model, type = 2, extra = 104, box.palette = "BuGn")
 # check importance
 tree_model$variable.importance
 
+##### Tree model plots #####
+# general heatmap with decision boundary lines
+ggplot(allshot_xG) +
+  annotate_pitch(colour = "white", fill = "green") +
+  
+  # adjust the density heatmap
+  geom_density_2d_filled(aes(x = possession.endLocation.x, y = possession.endLocation.y), 
+                         alpha = 0.6, contour_var = "ndensity") +
+  
+  ## smaller and more transparent goal indicators
+  #geom_point(data = subset(allshot_xG, shot.isGoal == TRUE),
+  #           aes(x = possession.endLocation.x, y = possession.endLocation.y),
+  #           color = "gray", size = 1.5, shape = 16, alpha = 0.6) +
+  
+  # hardcoded decision tree boundary lines
+  geom_vline(xintercept = 91.6, color = "blue", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = 94.8, color = "red", linetype = "dashed", size = 1) +
+  
+  theme_pitch() +
+  labs(title = "Shot Locations with Decision Tree Boundaries and Goal Indicators",
+       x = "Pitch Length", 
+       y = "Pitch Width") 
+
+# another plot but ugly af
+ggplot(allshot_xG) +
+  annotate_pitch(colour = "white", fill = "green") +
+  
+  # heatmap using xG values directly
+  stat_summary_2d(aes(x = possession.endLocation.x, 
+                      y = possession.endLocation.y, 
+                      z = xG),
+                  fun = mean, bins = 30) +
+  
+  # add decision tree boundary lines
+  geom_vline(xintercept = 91.6, color = "blue", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = 94.8, color = "red", linetype = "dashed", size = 1) +
+  
+  scale_fill_viridis_c(option = "plasma", name = "Average xG") +
+  theme_pitch() +
+  labs(title = "Shot Locations with xG-based Heatmap and Decision Tree Boundaries",
+       x = "Pitch Length", 
+       y = "Pitch Width")
+
+
+
+
 ##### Split data #####
 set.seed(123) # for reproducablility
 library(caret)
