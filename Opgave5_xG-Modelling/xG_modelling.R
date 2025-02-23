@@ -1,3 +1,11 @@
+library(dplyr)
+
+
+# Great video:
+# https://youtu.be/VcdFOiBWsKM?si=YFJajpPF4IbolKr1
+
+
+
 #### Opgave 5.1 - Opdeling i trænings- og testdata for skud ####
 # Hent alle skud for den polske og hollandske liga og opdel skuddene i trænings- og testdata. 
 # Forklar jeres fremgangsmåde. 
@@ -71,12 +79,34 @@ polish_shot <- allshot_xG %>% filter(team.name %in% polish_teams)
   # Possession end
   # Possession start?
     # Length to goal
+# Sick pythagorean math shit
 allshot_xG$shot_distance <- sqrt((100 - allshot_xG$possession.endLocation.x)^2 + 
                                    (50 - allshot_xG$possession.endLocation.y)^2)
-hist(allshot_xG$)
+hist(allshot_xG$shot_distance)
+ggplot(allshot_xG, aes(x = shot_distance, y = as.numeric(shot.isGoal))) +
+  geom_point(alpha = 0.3, color = "black") + # Points for each shot
+  geom_smooth(method = "loess", color = "blue", fill = "lightgray") + # Smooth curve
+  labs(
+    title = "Shot Distance vs Goal Probability",
+    x = "Shot Distance to Goal",
+    y = "Goal (1) / No Goal (0)"
+  ) +
+  theme_minimal()
+# The tail indicates outliers? 
     # Angle to goal
+# with absolute values, 90 - -90
+allshot_xG$shot_angle_abs <- atan2(allshot_xG$possession.endLocation.y - 50, 
+                                   100 - allshot_xG$possession.endLocation.x) * 180 / pi
+# with absolute values, aka no negatives 90 - 0
+allshot_xG$shot_angle_abs <- atan2(abs(allshot_xG$possession.endLocation.y - 50), 
+                               100 - allshot_xG$possession.endLocation.x) * 180 / pi
 
-
+xG_group <- allshot_xG %>% group_by(shot.isGoal) %>% 
+  summarise(
+    avg_distance = mean(shot_distance),
+    avg_angle = mean(shot_angle),
+    avg_angle_abs = mean(shot_angle_abs)
+  )
 
 ##### Visualize it #####
 # Soruce: https://soccermatics.readthedocs.io/en/latest/gallery/lesson1/plot_PlottingShots.html
@@ -101,6 +131,30 @@ ggplot(allshot_xG) +
   labs(title = "Shot Locations Density Heatmap", x = "Pitch Length", y = "Pitch Width")
       ###### Evt make these for also actual goals #####
       ###### For this also make a shot to goal successrate, to be at the beginning of report ######
+
+
+
+
+
+
+
+# Could be interesting to check out 
+# https://wiscostret.wordpress.com/2019/04/22/shot-distance-xg-efficiency-and-player-style/
+# https://www.datofutbol.cl/blog/xg-model/index.html
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### 5.3 ####
 ####  Training vs Test Data ####
