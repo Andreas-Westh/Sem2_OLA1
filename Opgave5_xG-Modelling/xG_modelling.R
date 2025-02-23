@@ -304,9 +304,25 @@ glm_test <- predict(glm_train, test_data, type = "response")
 glm_test_class <- ifelse(glm_test > 0.2, TRUE, FALSE)
 
 ##### Evaluating #####
+goal_summary <- allshot_xG %>%
+  summarise(
+    Total_Shots = n(),
+    Successful_Goals = sum(shot.isGoal),
+    Goal_Ratio = round(Successful_Goals / Total_Shots, 4),
+    baseline_acc = round(mean(allshot_xG$shot.isGoal == FALSE), 4)
+  )
 tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
 tree_confusion
 # 90% acc
+##########################################################################
+##########################################################################
+### MAKE SURE THAT THIS ACC IS BETTER THAN THE RATIO OF SUCC GOALS!!!! ###
+##########################################################################
+##########################################################################
+##########################################################################
+##########################################################################
+tree_acc <- tree_confusion$overall['Accuracy']
+goal_summary$tree_acc <- tree_acc
 
 glm_confusion <- confusionMatrix(as.factor(glm_test_class), as.factor(test_data$shot.isGoal))
 glm_confusion
