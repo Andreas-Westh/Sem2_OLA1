@@ -95,7 +95,7 @@ ggplot(allshot_xG, aes(x = shot_distance, y = as.numeric(shot.isGoal))) +
 # The tail indicates outliers? 
     # Angle to goal
 # with absolute values, 90 - -90
-allshot_xG$shot_angle_abs <- atan2(allshot_xG$possession.endLocation.y - 50, 
+allshot_xG$shot_angle <- atan2(allshot_xG$possession.endLocation.y - 50, 
                                    100 - allshot_xG$possession.endLocation.x) * 180 / pi
 # with absolute values, aka no negatives 90 - 0
 allshot_xG$shot_angle_abs <- atan2(abs(allshot_xG$possession.endLocation.y - 50), 
@@ -154,17 +154,145 @@ ggplot(allshot_xG) +
 
 
 
-
-
 #### 5.3 ####
-####  Training vs Test Data ####
-# Sample size
-set.seed(123)
-smp_size <- floor(0.7*nrow(allshot_flat))
+# https://marclamberts.medium.com/correlation-between-shooting-angles-and-expected-goals-xg-68db6f2e6045
 
-# set seed
-train_ind <- sample(seq_len(nrow(allshot_flat)), size = smp_size)
+# goal angle for goal width
 
-train <- allshot_flat[train_ind, ]
-test <- allshot_flat[-train_ind, ]
+glm_all <- glm(shot.isGoal ~ shot_angle_abs + shot_angle + shot_distance, data = allshot_xG)
+summary(glm_all)
+# shot_angle > shot_angle_abs
+
+glm <- glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG)
+summary(glm)
+
+# måske tjek cor
+library(corrplot)
+cor_df <- data.frame(allshot_xG$shot_distance, allshot_xG$shot_angle, allshot_xG$shot.isGoal)
+cor <- cor(cor_df)
+corrplot(cor, 
+         method = "square",     # Farvede firkanter
+         type = "lower",        # Kun nederste trekant
+         diag = FALSE,          # Fjern diagonalen
+         tl.col = "black",      # Labels i sort
+         number.digits = 2,     # Antal decimaler
+         addCoef.col = "black",) # Tilføj koefficienter i sort
+# Weird result, multicollinearity?
+
+# checking for multicollinearity
+library(car)
+vif(glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG))
+# There is none, unsure about the corrplot issue
+
+
+# Treeplot
+library(rpart)
+library(rpart.plot)
+tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance,
+                    data = allshot_xG,
+                    method = "class",
+)
+rpart.plot(tree_model, type = 2, extra = 104, box.palette = "BuGn")
+# check importance
+tree_model$variable.importance
+
+##### Split data #####
+set.seed(123) # for reproducablility
+library(caret)
+train_index <- createDataPartition(y = allshot_xG$shot.isGoal,
+                                   # times = x
+                                   p = 0.7,
+                                   list = FALSE)
+# createDataPartition helps unbalanced datasets maintain a similar ratio of goals
+
+train_data <- allshot_xG[train_index,]
+test_data <- allshot_xG[-train_index,]
+
+
+###### Checking out the split data ######
+                table(train_data$shot.isGoal)
+                table(test_data$shot.isGoal)
+                
+                prop.table(table(train_data$shot.isGoal))
+                prop.table(table(test_data$shot.isGoal))
+                # Very close 
+                
+                # combine training and test sets with a label
+                train_data$dataset <- "Training"
+                test_data$dataset <- "Test"
+                combined_data <- rbind(train_data, test_data)
+                
+                # plot the distribution of shot.isGoal in both sets
+                ggplot(combined_data, aes(x = shot.isGoal, fill = dataset)) +
+                  geom_bar(position = "dodge") +
+                  labs(title = "Distribution of Shot Outcomes in Training vs. Test Sets",
+                       x = "Shot is Goal",
+                       y = "Count") +
+                  theme_minimal()
+                
+                # distance and angle in both datasets
+                ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
+                  geom_point(alpha = 0.7) +
+                  labs(title = "Shot Distance vs. Shot Angle by Dataset",
+                       x = "Shot Distance",
+                       y = "Shot Angle") +
+                  theme_minimal()
+
+
+##### Training #####
+tree_model_train <- rpart(shot.isGoal ~ shot_angle + shot_distance,
+                          data = train_data,
+                          method = "class")
+rpart.plot(tree_model_train, type = 2, extra = 104, box.palette = "BuGn")
+
+# train for glm
+            glm_train <- glm(shot.isGoal ~ shot_angle + shot_distance,
+                             data = train_data,
+                             family = "binomial")
+            summary(glm_train)
+
+##### Testing #####
+tree_test <- predict(tree_model, test_data, type = "class")
+
+glm_test <- predict(glm_train, test_data, type = "response")
+glm_test_class <- ifelse(glm_test > 0.2, TRUE, FALSE)
+
+##### Evaluating #####
+tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
+tree_confusion
+# 90% acc
+
+glm_confusion <- confusionMatrix(as.factor(glm_test_class), as.factor(test_data$shot.isGoal))
+glm_confusion
+
+
+allshot_xG$xG <- predict(tree_model, allshot_xG, type = "prob")[, "TRUE"]
+  # the [, TRUE], makes it so we only get the TRUE column, not the false
+
+
+allshot_xG$xG_diff <- allshot_xG$xG - allshot_xG$shot.xg
+
+ggplot(allshot_xG, aes(x = xG_diff, fill = shot.isGoal)) +
+  geom_histogram(binwidth = 0.05, alpha = 0.7) +
+  labs(title = "Distribution of xG Differences (Decision Tree xG - Original xG)",
+       x = "xG Difference",
+       y = "Count") +
+  theme_minimal()
+# ikke helt så optimistisk, som den eksiterende xg
+
+# abs is used, so that over/undershooting (direction) doesnt change the overall avg
+mae_tree <- mean(abs(allshot_xG$xG - allshot_xG$shot.isGoal))
+mae_original <- mean(abs(allshot_xG$shot.xg - allshot_xG$shot.isGoal))
+
+# see the mean absolute error between ours and wyscout
+print(mae_tree, 4)
+print(mae_original, 4)
+# WyScout is better 
+
+
+
+
+
+
+
 
