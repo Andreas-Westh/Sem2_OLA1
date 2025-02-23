@@ -73,7 +73,7 @@ polish_shot <- allshot_xG %>% filter(team.name %in% polish_teams)
     # Length to goal
 allshot_xG$shot_distance <- sqrt((100 - allshot_xG$possession.endLocation.x)^2 + 
                                    (50 - allshot_xG$possession.endLocation.y)^2)
-hist(allshot_xG$shot_distance)
+hist(allshot_xG$)
     # Angle to goal
 
 
@@ -99,7 +99,8 @@ ggplot(allshot_xG) +
                          alpha = 0.8) +
   theme_pitch() +
   labs(title = "Shot Locations Density Heatmap", x = "Pitch Length", y = "Pitch Width")
-
+      ###### Evt make these for also actual goals #####
+      ###### For this also make a shot to goal successrate, to be at the beginning of report ######
 
 #### 5.3 ####
 ####  Training vs Test Data ####
