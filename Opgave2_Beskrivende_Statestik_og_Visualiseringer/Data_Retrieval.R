@@ -17,7 +17,9 @@ allpasses <- cong$find(query = '{"type.primary": "pass"}')
 allshot <- cong$find(query = '{"type.primary": "shot"}')
 
 
+# Flatten data
 
+allshot_flat <- fromJSON(toJSON(allshot), flatten = TRUE)
 
 
 

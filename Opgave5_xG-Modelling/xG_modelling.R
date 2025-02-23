@@ -61,13 +61,47 @@ polish_shot <- allshot_xG %>% filter(team.name %in% polish_teams)
 
 #### 5.2 ####
 
+# X-variables
+# Foot or head
+# Shot position
+# Possession type? 
+# Source: https://dataglossary.wyscout.com/pitch_coordinates/
+  # location x
+  # location y
+  # Possession end
+  # Possession start?
+    # Length to goal
+allshot_xG$shot_distance <- sqrt((100 - allshot_xG$possession.endLocation.x)^2 + 
+                                   (50 - allshot_xG$possession.endLocation.y)^2)
+hist(allshot_xG$shot_distance)
+    # Angle to goal
 
 
 
+##### Visualize it #####
+# Soruce: https://soccermatics.readthedocs.io/en/latest/gallery/lesson1/plot_PlottingShots.html
+library(ggplot2)
+library(ggsoccer)
+
+# More visible outliers
+ggplot(allshot_xG) +
+  annotate_pitch(colour = "white", fill = "green") +
+  geom_bin2d(aes(x = possession.endLocation.x, y = possession.endLocation.y), 
+             bins = 30) + # more or less detail
+  theme_pitch() +
+  scale_fill_gradient(low = "blue", high = "red") + # Color scale for heatmap
+  labs(title = "Shot Locations Heatmap", x = "Pitch Length", y = "Pitch Width")
+
+# General heatmap
+ggplot(allshot_xG) +
+  annotate_pitch(colour = "white", fill = "green") +
+  geom_density_2d_filled(aes(x = possession.endLocation.x, y = possession.endLocation.y), 
+                         alpha = 0.8) +
+  theme_pitch() +
+  labs(title = "Shot Locations Density Heatmap", x = "Pitch Length", y = "Pitch Width")
 
 
-
-
+#### 5.3 ####
 ####  Training vs Test Data ####
 # Sample size
 set.seed(123)
