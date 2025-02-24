@@ -105,8 +105,24 @@ allshot_xG$shot_angle <- atan2(allshot_xG$possession.endLocation.y - 50,
                                    100 - allshot_xG$possession.endLocation.x) * 180 / pi
 # with absolute values, aka no negatives 90 - 0
 allshot_xG$shot_angle_abs <- atan2(abs(allshot_xG$possession.endLocation.y - 50), 
-                               100 - allshot_xG$possession.endLocation.x) * 180 / pi
+                               abs(100 - allshot_xG$possession.endLocation.x)) * 180 / pi
 
+# calculate the shot angle using the two goalposts and ensure it stays between 0 and 90 degrees
+allshot_xG$angle <- abs(
+  atan2(63 - allshot_xG$possession.endLocation.y, 100 - allshot_xG$possession.endLocation.x) - 
+    atan2(37 - allshot_xG$possession.endLocation.y, 100 - allshot_xG$possession.endLocation.x)
+)
+
+# convert radians to degrees
+allshot_xG$angle <- allshot_xG$shot_angle * 180 / pi
+
+allshot_xG$angle <- pmin(allshot_xG$shot_angle, 90)
+
+
+
+
+
+# grouped by
 xG_group <- allshot_xG %>% group_by(shot.isGoal) %>% 
   summarise(
     avg_distance = mean(shot_distance),
@@ -163,11 +179,15 @@ ggplot(allshot_xG) +
 
 # goal angle for goal width
 
-glm_all <- glm(shot.isGoal ~ shot_angle_abs + shot_angle + shot_distance, data = allshot_xG)
-summary(glm_all)
-# shot_angle > shot_angle_abs
+glm_all_noab <- glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG)
+summary(glm_all_noab)
 
-glm <- glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG)
+glm_all_ab <- glm(shot.isGoal ~ shot_angle_abs + shot_distance, data = allshot_xG)
+summary(glm_all_ab)
+# shot_angle > shot_angle_abs
+# Smæk flere ind, evt også direkte x og y
+
+glm <- glm(shot.isGoal ~ shot_angle + shot_distance + shot.bodyPart, data = allshot_xG)
 summary(glm)
 
 # måske tjek cor
@@ -188,10 +208,13 @@ vif(glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG))
 
 
 # Treeplot
-tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance,
-                    data = allshot_xG,
-                    method = "class",
-)
+tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance + shot.bodyPart,
+                         data = allshot_xG,
+                         method = "class",
+                         control = rpart.control(#maxdepth = 6,   # øg maks dybde
+                                                 minsplit = 3,    # lavere min split
+                                                 cp = 0.001))     # lavere kompleksitet
+
 rpart.plot(tree_model, type = 2, extra = 104, box.palette = "BuGn")
 # check importance
 tree_model$variable.importance
