@@ -1,4 +1,10 @@
 library(dplyr)
+library(ggplot2)
+library(ggsoccer)
+library(corrplot)
+library(rpart)
+library(rpart.plot)
+library(caret)
 
 
 # Great video:
@@ -110,8 +116,6 @@ xG_group <- allshot_xG %>% group_by(shot.isGoal) %>%
 
 ##### Visualize it #####
 # Soruce: https://soccermatics.readthedocs.io/en/latest/gallery/lesson1/plot_PlottingShots.html
-library(ggplot2)
-library(ggsoccer)
 
 # More visible outliers
 ggplot(allshot_xG) +
@@ -167,7 +171,6 @@ glm <- glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG)
 summary(glm)
 
 # måske tjek cor
-library(corrplot)
 cor_df <- data.frame(allshot_xG$shot_distance, allshot_xG$shot_angle, allshot_xG$shot.isGoal)
 cor <- cor(cor_df)
 corrplot(cor, 
@@ -180,14 +183,11 @@ corrplot(cor,
 # Weird result, multicollinearity?
 
 # checking for multicollinearity
-library(car)
 vif(glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG))
 # There is none, unsure about the corrplot issue
 
 
 # Treeplot
-library(rpart)
-library(rpart.plot)
 tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance,
                     data = allshot_xG,
                     method = "class",
@@ -244,7 +244,6 @@ ggplot(allshot_xG) +
 
 ##### Split data #####
 set.seed(123) # for reproducablility
-library(caret)
 train_index <- createDataPartition(y = allshot_xG$shot.isGoal,
                                    # times = x
                                    p = 0.7,
@@ -314,13 +313,7 @@ goal_summary <- allshot_xG %>%
 tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
 tree_confusion
 # 90% acc
-##########################################################################
-##########################################################################
 ### MAKE SURE THAT THIS ACC IS BETTER THAN THE RATIO OF SUCC GOALS!!!! ###
-##########################################################################
-##########################################################################
-##########################################################################
-##########################################################################
 tree_acc <- tree_confusion$overall['Accuracy']
 goal_summary$tree_acc <- tree_acc
 
@@ -330,8 +323,20 @@ glm_confusion
 
 allshot_xG$xG <- predict(tree_model, allshot_xG, type = "prob")[, "TRUE"]
   # the [, TRUE], makes it so we only get the TRUE column, not the false
+# xG kan have mange af samme værdier, dette er grundet et simelt træ med få noder
+printcp(tree_model) # tjek træets kompleksitet
 
+# testing by forcing it to be more complex
+                tree_model_komp <- rpart(shot.isGoal ~ shot_angle + shot_distance,
+                                    data = allshot_xG,
+                                    method = "class",
+                                    control = rpart.control(maxdepth = 6,   # øg maks dybde
+                                                            minsplit = 5,    # lavere min split
+                                                            cp = 0.001))     # lavere kompleksitet
+                
+                rpart.plot(tree_model_komp, type = 2, extra = 104, box.palette = "BuGn")
 
+ 
 allshot_xG$xG_diff <- allshot_xG$xG - allshot_xG$shot.xg
 
 ggplot(allshot_xG, aes(x = xG_diff, fill = shot.isGoal)) +
