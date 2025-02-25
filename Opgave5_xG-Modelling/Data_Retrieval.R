@@ -62,5 +62,3 @@ allshot_xG <- allshot_2122 %>% filter(
 
 
 
-
-
