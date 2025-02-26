@@ -60,6 +60,35 @@
 
 # evaluation
 # Mean absolute error for our xG vs WyScout
+          # abs is used, so that over/undershooting (direction) doesnt change the overall avg
+          mae_tree <- mean(abs(allshot_xG$xG - allshot_xG$shot.isGoal))
+          mae_original <- mean(abs(allshot_xG$shot.xg - allshot_xG$shot.isGoal))
+          # see the mean absolute error between ours and wyscout
+          print(mae_tree, 4)
+          print(mae_original, 4)
+          
+          # residual sum of squares (rss)
+          rss_tree <- sum((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
+          rss_original <- sum((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
+          cat("Tree Model - RSS:", round(rss_tree, 4), "MSE:", round(mse_tree, 4), "\n")
+
+                    # mean squared error (mse)
+          mse_tree <- mean((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
+          mse_original <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
+          cat("Original xG Model - RSS:", round(rss_original, 4), "MSE:", round(mse_original, 4), "\n")
+          
+            ###### RSS/MSE NOTES ######
+          # WyScout scores better in all
+          #lower rss/mse indicates a better model fit.
+          #if the tree model's mse is lower than the original xg model, it means the tree model's predictions are closer to actual outcomes on average, with less severe errors.
+          
+          #use mse if you want to penalize large errors more (e.g., when big mispredictions are costly).
+          #use rss if you are comparing models on the same dataset, as it emphasizes total error.
+          #stick with mae if you want to avoid outlier influence, keeping all errors equally weighted.
+          
+          #if your xG model occasionally makes big mistakes, mse will highlight this more clearly than mae.
+          #if your model predictions are generally close but with a few big misses, comparing mae vs. mse can reveal this behavior.
+          
 # confusion matrix
   # is it better than baseline
 # Roc curce?
