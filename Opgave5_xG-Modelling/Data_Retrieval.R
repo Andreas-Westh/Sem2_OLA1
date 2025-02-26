@@ -57,7 +57,7 @@ allshot_xG <- allshot_2122 %>% filter(
                                       str_detect(type.secondary, "shot_after_") |
                                         !str_detect(possession.types, paste(dead_balls, collapse = "|"))
 )
-
+#
 
 
 

@@ -9,3 +9,4 @@ print(goal_percentage)
 
 
 # Difference between Poland, Dutch and total
+#

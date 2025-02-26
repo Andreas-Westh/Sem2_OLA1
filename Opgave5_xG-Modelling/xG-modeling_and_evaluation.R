@@ -88,7 +88,7 @@
           
           #if your xG model occasionally makes big mistakes, mse will highlight this more clearly than mae.
           #if your model predictions are generally close but with a few big misses, comparing mae vs. mse can reveal this behavior.
-          
+          #
 # confusion matrix
   # is it better than baseline
 # Roc curce?
