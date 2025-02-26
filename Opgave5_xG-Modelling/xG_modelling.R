@@ -5,6 +5,7 @@ library(corrplot)
 library(rpart)
 library(rpart.plot)
 library(caret)
+library(tidyverse)
 
 
 # Great video:
@@ -203,6 +204,7 @@ corrplot(cor,
 # Weird result, multicollinearity?
 
 # checking for multicollinearity
+library(car)
 vif(glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG))
 # There is none, unsure about the corrplot issue
 
@@ -270,8 +272,7 @@ set.seed(123) # for reproducablility
 train_index <- createDataPartition(y = allshot_xG$shot.isGoal,
                                    # times = x
                                    p = 0.7,
-                                   list = FALSE)
-# createDataPartition helps unbalanced datasets maintain a similar ratio of goals
+                                   list = FALSE)# createDataPartition helps unbalanced datasets maintain a similar ratio of goals
 
 train_data <- allshot_xG[train_index,]
 test_data <- allshot_xG[-train_index,]
@@ -377,7 +378,8 @@ mae_original <- mean(abs(allshot_xG$shot.xg - allshot_xG$shot.isGoal))
 # see the mean absolute error between ours and wyscout
 print(mae_tree, 4)
 print(mae_original, 4)
-# WyScout is better 
+# WyScout is better
+
 
 
 
