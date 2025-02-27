@@ -219,7 +219,7 @@ tree_df <- allshot_xG %>%
     shot_angle = scale(shot_angle)
   )
 
-tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance + 
+tree_model <- rpart(shot.isGoal ~ shot_angle_geom + shot_distance + 
                       shot.bodyPart + possession.duration + 
                       possession.endLocation.x + possession.endLocation.y + 
                       player.position,
@@ -417,9 +417,21 @@ cat("Tree Model - RSS:", round(rss_tree, 4), "MSE:", round(mse_tree, 4), "\n")
 #  possession.endLocation.x + possession.endLocation.y + 
 #  player.position,
 
+#### Highest acc tree model ####
+tree_model <- rpart(shot.isGoal ~ shot_angle_geom + shot_distance + 
+                      shot.bodyPart + possession.duration + 
+                      possession.endLocation.x + possession.endLocation.y + 
+                      player.position,
+                    data = allshot_xG,
+                    method = "class",
+                    control = rpart.control(#maxdepth = 6,   # øg maks dybde
+                      minsplit = 3,    # lavere min split
+                      cp = 0.001)     # lavere kompleksitet
+)
 
-
-
+tree_test <- predict(tree_model, test_data, type = "class")
+tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
+tree_confusion
 
 
 

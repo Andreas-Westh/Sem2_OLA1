@@ -1,16 +1,97 @@
-# split data (maybe also should be in data_exploration) 
-  # data exloration within the 2
+#### make for all, dutch and poland ####
+#
+#### SET VARIABLES HERE!!!! ####
+#
+x_variables <- c("shot_angle_geom", "shot_distance", 
+                 "shot.bodyPart", "possession.duration", 
+                 "possession.endLocation.x", "possession.endLocation.y", 
+                 "player.position")
 
-# made for all, dutch and poland
+variables <- as.formula(paste("shot.isGoal ~", paste(x_variables, collapse = " + ")))
 
-# start with glm
+#### Splitting data #### 
+set.seed(123) # for reproducablility
+train_index <- createDataPartition(y = allshot_xG$shot.isGoal,
+                                   # times = x
+                                   p = 0.7,
+                                   list = FALSE)# createDataPartition helps unbalanced datasets maintain a similar ratio of goals
+
+train_data <- allshot_xG[train_index,]
+test_data <- allshot_xG[-train_index,]
+
+
+##### Checking out the split data #####
+table(train_data$shot.isGoal)
+table(test_data$shot.isGoal)
+
+prop.table(table(train_data$shot.isGoal))
+prop.table(table(test_data$shot.isGoal))
+# Very close 
+
+# combine training and test sets with a label
+train_data$dataset <- "Training"
+test_data$dataset <- "Test"
+combined_data <- rbind(train_data, test_data)
+
+# plot the distribution of shot.isGoal in both sets
+ggplot(combined_data, aes(x = shot.isGoal, fill = dataset)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Distribution of Shot Outcomes in Training vs. Test Sets",
+       x = "Shot is Goal",
+       y = "Count") +
+  theme_minimal()
+
+# distance and angle in both datasets
+ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Shot Distance vs. Shot Angle by Dataset",
+       x = "Shot Distance",
+       y = "Shot Angle") +
+  theme_minimal()
+
+
+#### GLM ####
   # make with training
+  glm_train <- glm(variables, 
+                   data = train_data, 
+                   family = "binomial")
+  summary(glm_train)
+  # multicollinearity
+  vif(glm_train)
+
   # same validation as for tree
 # correlation (maybe should be in data_exploration)
   # checking for multicollinearity
 
 #tree model
   # make with training
+  tree_model_train <- rpart(variables,
+                            data = train_data,
+                            method = "class")
+  rpart.plot(tree_model_train, type = 2, extra = 104, box.palette = "BuGn")
+  
+  tree_test <- predict(tree_model_train, test_data, type = "class")
+
+  goal_summary <- allshot_xG %>%
+    summarise(
+      Total_Shots = n(),
+      Successful_Goals = sum(shot.isGoal),
+      Goal_Ratio = round(Successful_Goals / Total_Shots, 4),
+      baseline_acc = round(mean(allshot_xG$shot.isGoal == FALSE), 4)
+    )
+  tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
+  tree_confusion
+  ##### The best acc tree model can be found in xGmodelling line 420 #####
+  # it is due to the tree model being trained on full data.
+  
+  
+  
+  
+  
+  
+  
+  tree_acc <- tree_confusion$overall['Accuracy']
+  goal_summary$tree_acc <- tree_acc
   # check for Overfitting
           # calculate accuracy on training data
           train_pred <- predict(tree_model, train_data, type = "class")
@@ -92,3 +173,5 @@
 # confusion matrix
   # is it better than baseline
 # Roc curce?
+
+             
