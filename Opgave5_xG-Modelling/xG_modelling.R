@@ -219,7 +219,10 @@ tree_df <- allshot_xG %>%
     shot_angle = scale(shot_angle)
   )
 
-tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance + shot.bodyPart + possession.duration + possession.endLocation.x + possession.endLocation.y + player.position,
+tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance + 
+                      shot.bodyPart + possession.duration + 
+                      possession.endLocation.x + possession.endLocation.y + 
+                      player.position,
                          data = allshot_xG,
                          method = "class",
                          control = rpart.control(#maxdepth = 6,   # øg maks dybde
@@ -319,13 +322,19 @@ test_data <- allshot_xG[-train_index,]
 
 
 ##### Training #####
-tree_model_train <- rpart(shot.isGoal ~ shot_angle + shot_distance,
+tree_model_train <- rpart(shot.isGoal ~ shot_angle + shot_distance + 
+                            shot.bodyPart + possession.duration + 
+                            possession.endLocation.x + possession.endLocation.y + 
+                            player.position,
                           data = train_data,
                           method = "class")
 rpart.plot(tree_model_train, type = 2, extra = 104, box.palette = "BuGn")
 
 # train for glm
-            glm_train <- glm(shot.isGoal ~ shot_angle + shot_distance,
+            glm_train <- glm(shot.isGoal ~ shot_angle + shot_distance + 
+                               shot.bodyPart + possession.duration + 
+                               possession.endLocation.x + possession.endLocation.y + 
+                               player.position,
                              data = train_data,
                              family = "binomial")
             summary(glm_train)
@@ -361,7 +370,10 @@ allshot_xG$xG <- predict(tree_model, allshot_xG, type = "prob")[, "TRUE"]
 printcp(tree_model) # tjek træets kompleksitet
 
 # testing by forcing it to be more complex
-                tree_model_komp <- rpart(shot.isGoal ~ shot_angle + shot_distance,
+                tree_model_komp <- rpart(shot.isGoal ~ shot_angle + shot_distance + 
+                                           shot.bodyPart + possession.duration + 
+                                           possession.endLocation.x + possession.endLocation.y + 
+                                           player.position,
                                     data = allshot_xG,
                                     method = "class",
                                     control = rpart.control(maxdepth = 6,   # øg maks dybde
@@ -384,6 +396,9 @@ ggplot(allshot_xG, aes(x = xG_diff, fill = shot.isGoal)) +
 # abs is used, so that over/undershooting (direction) doesnt change the overall avg
 mae_tree <- mean(abs(allshot_xG$xG - allshot_xG$shot.isGoal))
 mae_original <- mean(abs(allshot_xG$shot.xg - allshot_xG$shot.isGoal))
+# see the mean absolute error between ours and wyscout
+print(mae_tree, 4)
+print(mae_original, 4)
 
 # residual sum of squares (rss)
 rss_tree <- sum((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
@@ -393,15 +408,14 @@ rss_original <- sum((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
 mse_tree <- mean((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
 mse_original <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
 
-# print the results
-cat("Tree Model - RSS:", round(rss_tree, 4), "MSE:", round(mse_tree, 4), "\n")
 cat("Original xG Model - RSS:", round(rss_original, 4), "MSE:", round(mse_original, 4), "\n")
-
-
-# see the mean absolute error between ours and wyscout
-print(mae_tree, 4)
-print(mae_original, 4)
-# WyScout is better
+cat("Tree Model - RSS:", round(rss_tree, 4), "MSE:", round(mse_tree, 4), "\n")
+# nuværende variabler slår WyScout:
+# shot.isGoal ~
+#  shot_angle + shot_distance + 
+#  shot.bodyPart + possession.duration + 
+#  possession.endLocation.x + possession.endLocation.y + 
+#  player.position,
 
 
 
