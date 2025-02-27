@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 library(shiny)
 library(shinydashboard)
 library(dplyr)
@@ -216,3 +217,6 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+=======
+#
+>>>>>>> 46c6c1953f73a6abffa35f62cacb1f3ae2a86658
