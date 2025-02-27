@@ -210,12 +210,22 @@ vif(glm(shot.isGoal ~ shot_angle + shot_distance, data = allshot_xG))
 
 
 # Treeplot
-tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance + shot.bodyPart,
+# skaler data før modellering
+allshot_xG$possession.duration <- as.numeric(allshot_xG$possession.duration)
+tree_df <- allshot_xG %>%
+  mutate(
+    possession.duration = scale(possession.duration),
+    shot_distance = scale(shot_distance),
+    shot_angle = scale(shot_angle)
+  )
+
+tree_model <- rpart(shot.isGoal ~ shot_angle + shot_distance + shot.bodyPart + possession.duration + possession.endLocation.x + possession.endLocation.y + player.position,
                          data = allshot_xG,
                          method = "class",
                          control = rpart.control(#maxdepth = 6,   # øg maks dybde
                                                  minsplit = 3,    # lavere min split
-                                                 cp = 0.001))     # lavere kompleksitet
+                                                 cp = 0.001)     # lavere kompleksitet
+)
 
 rpart.plot(tree_model, type = 2, extra = 104, box.palette = "BuGn")
 # check importance
@@ -374,6 +384,19 @@ ggplot(allshot_xG, aes(x = xG_diff, fill = shot.isGoal)) +
 # abs is used, so that over/undershooting (direction) doesnt change the overall avg
 mae_tree <- mean(abs(allshot_xG$xG - allshot_xG$shot.isGoal))
 mae_original <- mean(abs(allshot_xG$shot.xg - allshot_xG$shot.isGoal))
+
+# residual sum of squares (rss)
+rss_tree <- sum((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
+rss_original <- sum((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
+
+# mean squared error (mse)
+mse_tree <- mean((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
+mse_original <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
+
+# print the results
+cat("Tree Model - RSS:", round(rss_tree, 4), "MSE:", round(mse_tree, 4), "\n")
+cat("Original xG Model - RSS:", round(rss_original, 4), "MSE:", round(mse_original, 4), "\n")
+
 
 # see the mean absolute error between ours and wyscout
 print(mae_tree, 4)
