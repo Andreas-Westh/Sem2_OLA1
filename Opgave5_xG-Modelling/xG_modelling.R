@@ -411,7 +411,7 @@ mse_original <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
 cat("Original xG Model - RSS:", round(rss_original, 4), "MSE:", round(mse_original, 4), "\n")
 cat("Tree Model - RSS:", round(rss_tree, 4), "MSE:", round(mse_tree, 4), "\n")
 # nuværende variabler slår WyScout:
-# shot.isGoal ~
+#shot.isGoal ~
 #  shot_angle + shot_distance + 
 #  shot.bodyPart + possession.duration + 
 #  possession.endLocation.x + possession.endLocation.y + 

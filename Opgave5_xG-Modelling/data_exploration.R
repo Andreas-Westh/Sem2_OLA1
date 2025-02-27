@@ -157,7 +157,7 @@ hist(allshot$shot_angle)
 
 
 # Player posision
-# Evt reduce into less
+# Evt 
 
 
 # 3 Distance
