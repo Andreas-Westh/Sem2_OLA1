@@ -1,11 +1,20 @@
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(gbm)
+
 #### make for all, dutch and poland ####
 #
 #### SET VARIABLES HERE!!!! ####
 #
 x_variables <- c("shot_angle_geom", "shot_distance", 
                  "shot.bodyPart", "possession.duration", 
-                 "possession.endLocation.x", "possession.endLocation.y", 
                  "player.position")
+
+x_variables <- c("shot_angle_geom","shot_distance","shot.bodyPart","position_category")
+
+# Add from counter
 
 variables <- as.formula(paste("shot.isGoal ~", paste(x_variables, collapse = " + ")))
 
@@ -67,11 +76,12 @@ ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
   # make with training
   tree_model_train <- rpart(variables,
                             data = train_data,
-                            method = "class")
+                            method = "class",
+                            control = rpart.control(minsplit = 4)) 
   rpart.plot(tree_model_train, type = 2, extra = 104, box.palette = "BuGn")
+  tree_model_train$variable.importance
   
   tree_test <- predict(tree_model_train, test_data, type = "class")
-
   goal_summary <- allshot_xG %>%
     summarise(
       Total_Shots = n(),
@@ -85,7 +95,135 @@ ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
   # it is due to the tree model being trained on full data.
   
   
+  ##### Loop 1 #####
+  # Storage for the best model
+  best_accuracy <- 0
+  best_model <- NULL
+  best_combination <- NULL
   
+  # Iterate over all possible combinations of x_variables
+  for (i in 1:length(x_variables)) {
+    combinations <- combn(x_variables, i, simplify = FALSE)
+    
+    for (combo in combinations) {
+      
+      # Create the formula
+      variables <- as.formula(paste("shot.isGoal ~", paste(combo, collapse = " + ")))
+      
+      # Train the model
+      tree_model_train <- rpart(variables,
+                                data = train_data,
+                                method = "class",
+                                control = rpart.control(minsplit = 4)) 
+      
+      # Predict on test data
+      tree_test <- predict(tree_model_train, test_data, type = "class")
+      
+      # Calculate accuracy
+      tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
+      tree_acc <- tree_confusion$overall['Accuracy']
+      
+      # Check if this model is the best
+      if (tree_acc > best_accuracy) {
+        best_accuracy <- tree_acc
+        best_model <- tree_model_train
+        best_combination <- combo
+      }
+    }
+  }
+  
+  # Output the best results
+  cat("Best Accuracy:", round(best_accuracy, 4), "\n")
+  cat("Best Combination of Variables:", paste(best_combination, collapse = ", "), "\n")
+  
+  # Plot the best model
+  rpart.plot(best_model, type = 2, extra = 104, box.palette = "BuGn")
+  
+  ##### Loop 2 #####
+  # Lager til de bedste modeller og resultater
+  best_accuracy <- 0
+  best_model <- NULL
+  best_combination <- NULL
+  best_method <- NULL
+  
+  # Iterate over alle mulige kombinationer af x-variabler
+  for (i in 1:length(x_variables)) {
+    combinations <- combn(x_variables, i, simplify = FALSE)
+    
+    for (combo in combinations) {
+      
+      # Lav formel for modellen
+      variables <- as.formula(paste("shot.isGoal ~", paste(combo, collapse = " + ")))
+      
+      ## 1. Beslutningstræ Model
+      tree_model_train <- rpart(variables,
+                                data = train_data,
+                                method = "class",
+                                control = rpart.control(minsplit = 4))
+      
+      tree_test <- predict(tree_model_train, test_data, type = "class")
+      tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
+      tree_acc <- tree_confusion$overall['Accuracy']
+      
+      # Tjek om dette er den bedste model
+      if (tree_acc > best_accuracy) {
+        best_accuracy <- tree_acc
+        best_model <- tree_model_train
+        best_combination <- combo
+        best_method <- "Decision Tree"
+      }
+      
+      ## 2. Random Forest Model
+      rf_model <- randomForest(variables,
+                               data = train_data,
+                               ntree = 100,        # antal træer
+                               mtry = min(3, length(combo)), # antal variabler pr. split
+                               importance = TRUE)
+      
+      rf_test <- predict(rf_model, test_data, type = "class")
+      rf_confusion <- confusionMatrix(as.factor(rf_test), as.factor(test_data$shot.isGoal))
+      rf_acc <- rf_confusion$overall['Accuracy']
+      
+      if (rf_acc > best_accuracy) {
+        best_accuracy <- rf_acc
+        best_model <- rf_model
+        best_combination <- combo
+        best_method <- "Random Forest"
+      }
+      
+      ## 3. Gradient Boosting Model
+      gbm_model <- gbm(variables,
+                       data = train_data,
+                       distribution = "bernoulli",
+                       n.trees = 100,
+                       interaction.depth = 3,
+                       shrinkage = 0.1,
+                       cv.folds = 5,
+                       verbose = FALSE)
+      
+      gbm_pred <- predict(gbm_model, test_data, n.trees = 100, type = "response")
+      gbm_class <- ifelse(gbm_pred > 0.5, TRUE, FALSE)
+      gbm_confusion <- confusionMatrix(as.factor(gbm_class), as.factor(test_data$shot.isGoal))
+      gbm_acc <- gbm_confusion$overall['Accuracy']
+      
+      if (gbm_acc > best_accuracy) {
+        best_accuracy <- gbm_acc
+        best_model <- gbm_model
+        best_combination <- combo
+        best_method <- "Gradient Boosting"
+      }
+    }
+  }
+  
+  # Output af den bedste model
+  cat("Best Accuracy:", round(best_accuracy, 4), "\n")
+  cat("Best Combination of Variables:", paste(best_combination, collapse = ", "), "\n")
+  cat("Best Method:", best_method, "\n")
+  
+  # Hvis den bedste model er et beslutningstræ, plotter vi det
+  if (best_method == "Decision Tree") {
+    rpart.plot(best_model, type = 2, extra = 104, box.palette = "BuGn")
+  }
   
   
   

@@ -57,7 +57,33 @@ allshot_xG <- allshot_2122 %>% filter(
                                       str_detect(type.secondary, "shot_after_") |
                                         !str_detect(possession.types, paste(dead_balls, collapse = "|"))
 )
-#
+
+#### Better player positions ####
+goalkeeper <- c("GK")
+
+defense <- c("CB", "LCB", "RCB", "LCB3", "RCB3", 
+             "RB", "LB", "RWB", "LWB", "RB5", "LB5")
+
+midfield <- c("DMF", "RDMF", "LDMF", 
+              "CMF", "RCMF", "LCMF", "RCMF3", "LCMF3", 
+              "AMF", "RAMF", "LAMF")
+
+attack <- c("CF", "SS", 
+            "RW", "LW", "RWF", "LWF")
+
+allshot_xG <- allshot_xG %>%
+  mutate(position_category = case_when(
+    player.position %in% goalkeeper ~ "Goalkeeper",
+    player.position %in% defense ~ "Defense",
+    player.position %in% midfield ~ "Midfield",
+    player.position %in% attack ~ "Attack",
+    TRUE ~ "Unknown"  # fallback if position is not in any vector
+  ))
+
+
+
+
+
 saveRDS(allshot_xG, "Opgave5_xG-Modelling/allshot_xG.RDS")
 
 
