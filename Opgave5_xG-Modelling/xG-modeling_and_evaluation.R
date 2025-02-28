@@ -77,7 +77,9 @@ ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
   tree_model_train <- rpart(variables,
                             data = train_data,
                             method = "class",
-                            control = rpart.control(minsplit = 4)) 
+                            control = rpart.control(maxdepth = 10,   # øg maks dybde
+                                                    minsplit = 3,    # lavere min split
+                                                    cp = 0.001))     # lavere kompleksitet
   rpart.plot(tree_model_train, type = 2, extra = 104, box.palette = "BuGn")
   tree_model_train$variable.importance
   
