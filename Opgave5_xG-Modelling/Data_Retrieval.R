@@ -80,7 +80,9 @@ allshot_xG <- allshot_xG %>%
     TRUE ~ "Unknown"  # fallback if position is not in any vector
   ))
 
+# Make from counter or other thing
 
+# Make boolean over or under 80 min
 
 
 

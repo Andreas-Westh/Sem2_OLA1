@@ -10,7 +10,7 @@ library(gbm)
 #
 x_variables <- c("shot_angle_geom", "shot_distance", 
                  "shot.bodyPart", "possession.duration", 
-                 "player.position")
+                 "player.position","minute")
 
 x_variables <- c("shot_angle_geom","shot_distance","shot.bodyPart","position_category")
 
