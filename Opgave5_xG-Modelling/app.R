@@ -1,14 +1,13 @@
-<<<<<<< HEAD
 library(shiny)
 library(shinydashboard)
 library(dplyr)
 library(ggplot2)
 library(plotly)
 library(ggsoccer)
-#
+
 ui <- dashboardPage(
   skin = "blue",
-  dashboardHeader(title = "SUPER DUPER SEJ xG CALCULATOR"),
+  dashboardHeader(title = "xG-Calculator2000"),
   dashboardSidebar(
     sidebarMenu(
       menuItem("xG-Calculator2000", tabName = "grid_bane", selected = TRUE)
@@ -18,34 +17,43 @@ ui <- dashboardPage(
     tabItems(
       tabItem(
         tabName = "grid_bane",
-        h2("xG på banen ud fra distance fra mål, vinkel, kropsdel og ny xG-MODEL2000"),
+        h2("xG baseret på distance fra mål, vinkel, kropsdel og ny xG-MODEL2000"),
         fluidRow(
           box(
             width = 8,
-            title = "xG-MODEL2000 simulator",
+            title = "Af: Andreas W, Enes Y, Lukas C, Peter A, Sevim K.",
             plotlyOutput("grid_plot", height = "600px")
           ),
           
-          # Kolonne med to bokse under hinanden (4 bred)
-          column(width = 4,
-                 box(
-                   width = 12,
-                   title = "Klik-info",
-                   verbatimTextOutput("grid_info")
-                 ),
-                 box(
-                   width = 12,
-                   title = "Vælg kropsdel",
-                   selectInput(
-                     inputId = "bodypart",
-                     label   = "Kropsdel:",
-                     choices = c("right_foot", "left_foot", "head_or_other"),
-                     selected = "right_foot"
-                   )
-                 )
+          # Kolonne med to bokse + et imageOutput
+          column(
+            width = 4,
+            
+            box(
+              width = 12,
+              title = "Klik-info",
+              verbatimTextOutput("grid_info")
+            ),
+            
+            box(
+              width = 12,
+              title = "Vælg kropsdel",
+              selectInput(
+                inputId = "bodypart",
+                label   = "Kropsdel:",
+                choices = c("right_foot", "left_foot", "head_or_other"),
+                selected = "right_foot"
+              )
+            ),
+            
+            box(
+              width = 12,
+              title = "Skud-indikator",
+              imageOutput("player_img", height = "auto")
+            )
+            
           )
         )
-        # Ingen debug-boks længere
       )
     )
   )
@@ -53,16 +61,16 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  # -----------------------------
+  # -------------------------------------------------
   # Parametre for målet
-  # -----------------------------
+  # -------------------------------------------------
   goal_width    <- 7.32
   goal_center_y <- 50
   goal_x        <- 100
   
-  # -----------------------------
-  # "Legetøjsmodel" for xG (valgfrit)
-  # -----------------------------
+  # -------------------------------------------------
+  # "Legetøjsmodel" for xG
+  # -------------------------------------------------
   toy_xg_model <- function(x, y, bp) {
     dist_to_goal <- sqrt((goal_x - x)^2 + (goal_center_y - y)^2)
     sx <- abs(goal_x - x)
@@ -82,9 +90,9 @@ server <- function(input, output, session) {
     final_xg
   }
   
-  # -----------------------------
-  # LAV COARSE OMRÅDE (5x5) + FINE OMRÅDE (1x1)
-  # -----------------------------
+  # -------------------------------------------------
+  # Lav coarse/fine grids
+  # -------------------------------------------------
   x_seq_coarse <- seq(50, 95, by = 5)
   y_seq_coarse <- seq(0,  95, by = 5)
   
@@ -115,13 +123,14 @@ server <- function(input, output, session) {
   
   df_grid <- bind_rows(df_coarse, df_fine)
   
-  # -----------------------------
-  # (A) REAKTIVT data.frame TIL PRIK - men kun ÉN prik
-  # -----------------------------
-  # Gemmer KUN seneste klik => overskriver
+  # -------------------------------------------------
+  # REAKTIVT data.frame TIL PRIK (kun 1)
+  # -------------------------------------------------
   click_point <- reactiveVal(data.frame(x=numeric(), y=numeric()))
   
-  # Når man klikker, parse x_val, y_val => sæt som EEN prik
+  # REAKTIVT xG => som seneste beregning
+  current_xg <- reactiveVal(NA_real_)
+  
   observeEvent(event_data("plotly_click"), {
     evt <- event_data("plotly_click")
     if (!is.null(evt)) {
@@ -133,16 +142,21 @@ server <- function(input, output, session) {
       x_val <- as.numeric(trimws(parts[1]))
       y_val <- as.numeric(trimws(parts[2]))
       
-      # Overskriv den reaktive DF, så vi kun har 1 row
+      # Sæt prik
       click_point(data.frame(x=x_val, y=y_val))
+      
+      # Beregn xG => gem i current_xg
+      bp <- input$bodypart
+      xg_val <- toy_xg_model(x_val, y_val, bp)
+      current_xg(xg_val)
     }
   })
   
-  # -----------------------------
-  # (B) Plot: Halv bane + ÉN prik
-  # -----------------------------
+  # -------------------------------------------------
+  # Plot: Halv bane + prik
+  # -------------------------------------------------
   output$grid_plot <- renderPlotly({
-    df_click <- click_point()  # Henter (x, y)
+    df_click <- click_point()
     
     p <- ggplot(df_grid, aes(x = center_x, y = center_y)) +
       annotate_pitch(colour = "white", fill = "forestgreen", limits = FALSE) +
@@ -159,17 +173,15 @@ server <- function(input, output, session) {
         ),
         alpha = 0.3
       ) +
-      # PRIK - kun hvis DF ikke er tom
       {
         if (nrow(df_click) > 0) {
-          geom_point(data = df_click, 
-                     aes(x = x, y = y),
-                     color = "red", size=3)
+          geom_point(data = df_click, aes(x = x, y = y),
+                     color="red", size=3)
         } else {
           NULL
         }
       } +
-      scale_fill_manual(values = c(coarse = "red", fine = "blue")) +
+      scale_fill_manual(values = c(coarse = "green", fine = "green")) +
       labs(
         title = "xG-Calculator2000",
         fill  = "Felt-type"
@@ -178,9 +190,9 @@ server <- function(input, output, session) {
     ggplotly(p, tooltip = "text")
   })
   
-  # -----------------------------
-  # (C) Klik-info (distance, vinkel, xG)
-  # -----------------------------
+  # -------------------------------------------------
+  # Klik-info
+  # -------------------------------------------------
   output$grid_info <- renderPrint({
     evt <- event_data("plotly_click")
     if (is.null(evt)) {
@@ -207,16 +219,50 @@ server <- function(input, output, session) {
       angle_deg <- atan2(goal_width * sx, sx^2 + sy^2 - (goal_width/2)^2) * 180 / pi
       cat(sprintf(" -> Skydevinkel (geom) = %.2f grader\n", angle_deg))
       
-      # Evt. xG
+      # xG
       bp <- input$bodypart
       xg_val <- toy_xg_model(x_val, y_val, bp)
       cat(sprintf(" -> Kropsdel = %s\n", bp))
       cat(sprintf(" -> xG (toy-model) = %.3f\n", xg_val))
     }
   })
+  
+  # -------------------------------------------------
+  # Vælg PNG (sort / rod / gul / gron) => imageOutput
+  # -------------------------------------------------
+  output$player_img <- renderImage({
+    # Se, hvad xG er => Vælg billede
+    xg_now <- current_xg()
+    
+    # Hvis intet klik => xg_now = NA => brug sort.png
+    # Ellers:
+    #   if xg < 0.1 => rod.png
+    #   else if xg < 0.2 => gul.png
+    #   else => gron.png
+    
+    imgfile <- "sort.png"  # default
+    
+    if (!is.na(xg_now)) {
+      if (xg_now < 0.1) {
+        imgfile <- "rod.png"
+      } else if (xg_now < 0.2) {
+        imgfile <- "gul.png"
+      } else {
+        imgfile <- "gron.png"
+      }
+    }
+    
+    # Returner stien i www + attributter
+    list(
+      src = file.path("Documents/DAL-Projects/2.semester/flow1/FObold/Spiller_indikator/", imgfile),
+      contentType = "image/png",
+      alt = "Skud-indikator",
+      width = "70%"  
+    )
+    
+  }, deleteFile = FALSE)
 }
 
 shinyApp(ui, server)
-=======
-#
->>>>>>> 46c6c1953f73a6abffa35f62cacb1f3ae2a86658
+
+

@@ -1,0 +1,13 @@
+name: Opgave5_xG-Modelling
+title: Opgave5_xG-Modelling
+username: westh
+account: westh
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14135311
+bundleId: 9876410
+url: https://westh.shinyapps.io/Opgave5_xG-Modelling/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: allshot_xG.RDS|data_exploration.R|Data_Retrieval.R|xG_modelling.R|xG-modeling_and_evaluation.R
