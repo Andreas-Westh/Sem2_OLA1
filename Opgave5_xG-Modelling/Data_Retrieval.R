@@ -49,6 +49,10 @@ allmatches_2122 <- rbind(dutch_matches_2122, polish_matches_2122)
 
 ## all shots in those seasons
 allshot_2122 <- allshot %>% filter(allshot$matchId %in% allmatches_2122$id)
+allshot_2223 <- allshot %>%
+  filter(!(matchId %in% allmatches_2122$id))
+
+
 
 #### Remove deadball situations ####
 dead_balls <- c("free_kick","corner","penalty")
@@ -81,10 +85,24 @@ allshot_xG <- allshot_xG %>%
   ))
 
 # Make from counter or other thing
+allshot_xG <- allshot_xG %>% 
+  mutate(from_counter = grepl("counter", possession.types))
 
+from_counter_df <- allshot_xG %>% 
+  group_by(from_counter) %>% 
+  summarise(
+    count=n())
 # Make boolean over or under 80 min
-
-
+allshot_xG <- allshot_xG %>% 
+  mutate(late_game = case_when(
+    minute >= 80 ~ TRUE,
+    TRUE ~ FALSE
+  ))
+late_game_df <- allshot_xG %>% 
+  group_by(late_game) %>% 
+  summarise(
+    count = n()
+  )
 
 saveRDS(allshot_xG, "Opgave5_xG-Modelling/allshot_xG.RDS")
 

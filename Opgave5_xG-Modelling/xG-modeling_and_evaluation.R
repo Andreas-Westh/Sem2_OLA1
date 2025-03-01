@@ -8,15 +8,26 @@ library(gbm)
 #
 #### SET VARIABLES HERE!!!! ####
 #
-x_variables <- c("shot_angle_geom", "shot_distance", 
-                 "shot.bodyPart", "possession.duration", 
-                 "player.position","minute")
+x_variables <- c("shot_angle_geom", 
+                 "shot.bodyPart", 
+                 "possession.duration", 
+                 #"position_category",
+                 #"late_game",
+                 "from_counter",
+                 "shot_distance"
+                 )
 
-x_variables <- c("shot_angle_geom","shot_distance","shot.bodyPart","position_category")
+x_variables <- c("shot_angle_geom", "shot_distance", 
+                 "shot.bodyPart", 
+                 "position_category","from_counter")
+
+x_variables <- c("shot_angle_geom")
 
 # Add from counter
 
 variables <- as.formula(paste("shot.isGoal ~", paste(x_variables, collapse = " + ")))
+
+f
 
 #### Splitting data #### 
 set.seed(123) # for reproducablility
@@ -27,7 +38,11 @@ train_index <- createDataPartition(y = allshot_xG$shot.isGoal,
 
 train_data <- allshot_xG[train_index,]
 test_data <- allshot_xG[-train_index,]
+train_data$shot.isGoal <- as.factor(train_data$shot.isGoal)
+test_data$shot.isGoal <- as.factor(test_data$shot.isGoal)
 
+train_data <- allshot_2122
+test_data <- allshot_2223
 
 ##### Checking out the split data #####
 table(train_data$shot.isGoal)
@@ -61,6 +76,33 @@ ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
 
 #### GLM ####
   # make with training
+glm_result <- data.frame(x_variable = character(), p_value = numeric(), p_stars = character())
+
+get_significance_stars <- function(p) {
+  if (p < 0.001) {
+    return("***")
+  } else if (p < 0.01) {
+    return("**")
+  } else if (p < 0.05) {
+    return("*")
+  } else if (p < 0.1) {
+    return(".")
+  } else {
+    return("")
+  }
+}
+
+for (i in x_variables) {
+  #Sys.sleep(0.5)
+  formula_glm <- as.formula(paste("shot.isGoal ~", i))
+  glm_model <- glm(formula_glm, data = train_data, family = "binomial")
+  glm_pval <- summary(glm_model)$coefficients[2,4]
+  glm_stars <- get_significance_stars(glm_pval)
+  
+  tmp_glm <- data.frame(x_variable = i, p_value = as.numeric(glm_pval), p_stars = glm_stars)
+  glm_result <- rbind(glm_result, tmp_glm)
+}
+
   glm_train <- glm(variables, 
                    data = train_data, 
                    family = "binomial")
@@ -72,7 +114,7 @@ ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
 # correlation (maybe should be in data_exploration)
   # checking for multicollinearity
 
-#tree model
+#### tree model ####
   # make with training
   tree_model_train <- rpart(variables,
                             data = train_data,
@@ -93,9 +135,41 @@ ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
     )
   tree_confusion <- confusionMatrix(as.factor(tree_test), as.factor(test_data$shot.isGoal))
   tree_confusion
+  allshot_xG$xG_simple <- predict(tree_model_train, allshot_xG, type = "prob")[, "TRUE"]
+  mse_tree_simple <- mean((allshot_xG$xG_simple - allshot_xG$shot.isGoal)^2)
+  rss_tree_simple <- sum((allshot_xG$xG_simple - allshot_xG$shot.isGoal)^2)
+  cat("Simple Tree Model - RSS:", round(rss_tree_simple, 4), "MSE:", round(mse_tree_simple, 4), "\n")
+  
+  
   ##### The best acc tree model can be found in xGmodelling line 420 #####
   # it is due to the tree model being trained on full data.
   
+#### Random Forest ####
+  rf_model <- randomForest(variables, 
+                           data = train_data,
+                           ntree = 10000,       # Number of trees (adjust for speed/performance)
+                           mtry = floor(sqrt(length(x_variables))),  # Number of variables per split
+                           importance = TRUE)
+  
+  # Predict on test set
+  rf_test <- predict(rf_model, test_data, type = "class")
+  
+  # Evaluate accuracy
+  rf_confusion <- confusionMatrix(as.factor(rf_test), as.factor(test_data$shot.isGoal))
+  rf_confusion
+  
+  allshot_xG$xG <- predict(rf_model, allshot_xG, type = "prob")[, "TRUE"]
+  
+  mse_tree <- mean((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
+  mse_original <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
+  rss_tree <- sum((allshot_xG$xG - allshot_xG$shot.isGoal)^2)
+  rss_original <- sum((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
+  cat("WyScout xG Model - RSS:", round(rss_original, 4), "MSE:", round(mse_original, 4), "\n")
+  cat("Random Forest Model - RSS:", round(rss_tree, 4), "MSE:", round(mse_tree, 4), "\n")
+  
+  # Feature importance
+  importance(rf_model)
+  varImpPlot(rf_model)
   
   ##### Loop 1 #####
   # Storage for the best model
@@ -298,6 +372,137 @@ ggplot(combined_data, aes(x = shot_distance, y = shot_angle, color = dataset)) +
           mse_original <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal)^2)
           cat("Original xG Model - RSS:", round(rss_original, 4), "MSE:", round(mse_original, 4), "\n")
           
+  ##### Loop 3 og MSE
+          
+          # 1. Prepare the data: convert target to numeric (0/1) for regression
+          train_data$goal_numeric <- as.numeric(train_data$shot.isGoal) - 1  # TRUE/FALSE -> 1/0
+          
+          # Define predictor variables (replace with your actual predictor names)
+          predictors <- c("var1", "var2", "var3", "var4", "var5", "var6")  # example names
+          
+          # 2. Generate all combinations of predictors (from 1 to length(predictors))
+          all_combos <- list()
+          for (k in 1:length(predictors)) {
+            combo_k <- combn(predictors, k, simplify = FALSE)
+            all_combos <- c(all_combos, combo_k)
+          }
+          
+          # 3. Create 5-fold cross-validation indices
+          set.seed(123)  # for reproducibility
+          folds <- createFolds(train_data$goal_numeric, k = 5, list = TRUE)
+          
+          # Data frame to store results
+          results <- data.frame(Model=character(), Predictors=character(), 
+                                Hyperparams=character(), MSE=numeric(), stringsAsFactors=FALSE)
+          
+          # 4. Loop over each combination of predictors
+          for (combo in all_combos) {
+            # Construct formula for this predictor subset
+            formula_str <- paste("goal_numeric ~", paste(combo, collapse = " + "))
+            
+            ## --- Decision Tree (rpart) ---
+            best_mse_tree <- Inf
+            best_params_tree <- ""  
+            # Try a small grid of maxdepth and minsplit values
+            for (maxd in c(2, 3, 4, 5)) {
+              for (minsplt in c(5, 10, 20)) {
+                # Cross-val: accumulate MSE across folds for this parameter set
+                mse_values <- c()
+                for (i in 1:5) {
+                  # Training and validation indices for fold i
+                  train_idx <- setdiff(seq_len(nrow(train_data)), folds[[i]])
+                  val_idx   <- folds[[i]]
+                  # Train the decision tree on training fold
+                  tree_model <- rpart(as.formula(formula_str), data = train_data[train_idx, ],
+                                      method = "anova",
+                                      control = rpart.control(maxdepth = maxd, minsplit = minsplt, cp = 0))
+                  # Predict on validation fold
+                  pred <- predict(tree_model, newdata = train_data[val_idx, ])
+                  actual <- train_data$goal_numeric[val_idx]
+                  # MSE for this fold
+                  mse_values[i] <- mean((pred - actual)^2)
+                }
+                # Average CV MSE for this parameter combo
+                cv_mse <- mean(mse_values)
+                if (cv_mse < best_mse_tree) {
+                  best_mse_tree <- cv_mse
+                  best_params_tree <- paste0("maxdepth=", maxd, ", minsplit=", minsplt)
+                }
+              }
+            }
+            # Store best tree result for this combo
+            results <- rbind(results, data.frame(Model="DecisionTree", 
+                                                 Predictors=paste(combo, collapse=", "),
+                                                 Hyperparams=best_params_tree, 
+                                                 MSE=best_mse_tree, stringsAsFactors=FALSE))
+            
+            ## --- Random Forest (randomForest) ---
+            best_mse_rf <- Inf
+            best_mtry <- NA
+            # Define a small set of mtry values to try (1, a mid value, and all predictors)
+            p <- length(combo)
+            mtry_candidates <- unique(c(1, floor(sqrt(p)), floor(p/2), p))
+            for (mtry_val in mtry_candidates) {
+              mse_values <- c()
+              for (i in 1:5) {
+                train_idx <- setdiff(seq_len(nrow(train_data)), folds[[i]])
+                val_idx   <- folds[[i]]
+                rf_model <- randomForest(as.formula(formula_str), data = train_data[train_idx, ],
+                                         mtry = mtry_val, ntree = 100)  # use 100 trees for speed
+                pred <- predict(rf_model, newdata = train_data[val_idx, ])
+                actual <- train_data$goal_numeric[val_idx]
+                mse_values[i] <- mean((pred - actual)^2)
+              }
+              cv_mse <- mean(mse_values)
+              if (cv_mse < best_mse_rf) {
+                best_mse_rf <- cv_mse
+                best_mtry <- mtry_val
+              }
+            }
+            results <- rbind(results, data.frame(Model="RandomForest", 
+                                                 Predictors=paste(combo, collapse=", "),
+                                                 Hyperparams=paste0("mtry=", best_mtry),
+                                                 MSE=best_mse_rf, stringsAsFactors=FALSE))
+            
+            ## --- Gradient Boosting (gbm) ---
+            best_mse_gbm <- Inf
+            best_trees <- NA
+            # Try a couple of values for number of trees (keeping depth and shrinkage fixed)
+            for (ntrees in c(100, 300)) {
+              mse_values <- c()
+              for (i in 1:5) {
+                train_idx <- setdiff(seq_len(nrow(train_data)), folds[[i]])
+                val_idx   <- folds[[i]]
+                gbm_model <- gbm(as.formula(formula_str), data = train_data[train_idx, ],
+                                 distribution = "gaussian", n.trees = ntrees,
+                                 interaction.depth = 3, shrinkage = 0.1, verbose = FALSE)
+                pred <- predict(gbm_model, newdata = train_data[val_idx, ], n.trees = ntrees)
+                actual <- train_data$goal_numeric[val_idx]
+                mse_values[i] <- mean((pred - actual)^2)
+              }
+              cv_mse <- mean(mse_values)
+              if (cv_mse < best_mse_gbm) {
+                best_mse_gbm <- cv_mse
+                best_trees <- ntrees
+              }
+            }
+            results <- rbind(results, data.frame(Model="GBM", 
+                                                 Predictors=paste(combo, collapse=", "),
+                                                 Hyperparams=paste0("n.trees=", best_trees, 
+                                                                    ", depth=3, shrinkage=0.1"),
+                                                 MSE=best_mse_gbm, stringsAsFactors=FALSE))
+          }
+          
+          # 5. Inspect the results: find the top-performing models (lowest MSE)
+          results <- results[order(results$MSE), ]
+          head(results, 10)
+          
+          
+          
+          
+          
+
+
             ###### RSS/MSE NOTES ######
           # WyScout scores better in all
           #lower rss/mse indicates a better model fit.
