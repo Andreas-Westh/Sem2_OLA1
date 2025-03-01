@@ -7,6 +7,11 @@ library(rpart)
 library(caret)
 library(ggplot2)
 
+# Make this for polish, dutch and total!!!!!
+
+
+
+
 #### make for all, dutch and poland ####
 #
 #### SET VARIABLES HERE!!!! ####
@@ -112,13 +117,6 @@ for (i in x_variables) {
   summary(glm_train)
   # multicollinearity
   vif(glm_train)
-
-  # same validation as for tree
-# correlation (maybe should be in data_exploration)
-  # checking for multicollinearity
-  
-  ##### The best acc tree model can be found in xGmodelling line 420 #####
-  # it is due to the tree model being trained on full data.
   
 #### Random Forest ####
   rf_model <- randomForest(variables, 
@@ -148,38 +146,37 @@ for (i in x_variables) {
   varImpPlot(rf_model)
   
   #### find the best depth for a singular tree-model ####
-  # Define depth range
   depth_range <- 10
   mse_train <- numeric(depth_range)
   mse_test <- numeric(depth_range)
   mse_cv <- numeric(depth_range)
   
-  # Create 5-folds for cross-validation
+  # create amount of folds for cv
   set.seed(123)
-  folds <- createFolds(train_data$shot.isGoal, k = 5, list = TRUE)
+  folds <- createFolds(train_data$shot.isGoal, k = 20, list = TRUE)
   
-  # Loop over different tree depths
+  # loop for the different tree lenghts
   for (i in 1:depth_range) {
     tree_loop <- rpart(variables,
                        data = train_data,
                        method = "class",
                        control = rpart.control(maxdepth = i, cp = 0))  # Fix maxdepth
     
-    # Predict probabilities for training and test sets
+    # predicts
     loop_train <- predict(tree_loop, newdata = train_data, type = "prob")[, "TRUE"]
     loop_test <- predict(tree_loop, newdata = test_data, type = "prob")[, "TRUE"]
     
-    # Convert shot.isGoal to numeric (0/1) for MSE calculation
+    # make shot.isGoal numeric
     goal_numeric_train <- as.numeric(train_data$shot.isGoal) - 1
     goal_numeric_test <- as.numeric(test_data$shot.isGoal) - 1
     
-    # Compute MSE for training and test sets
+    # MSE 
     mse_train[i] <- mean((loop_train - goal_numeric_train)^2)
     mse_test[i] <- mean((loop_test - goal_numeric_test)^2)
     
-    # **Manual Cross-Validation**
-    mse_folds <- numeric(5)
-    for (f in 1:5) {
+    #Cross-Validation
+    mse_folds <- numeric(20)
+    for (f in 1:20) {
       train_idx <- setdiff(seq_len(nrow(train_data)), folds[[f]])
       val_idx   <- folds[[f]]
       
@@ -212,18 +209,21 @@ for (i in x_variables) {
     geom_point() +
     geom_line() +
     scale_x_continuous(breaks = 1:depth_range) +  # Ensures x-axis has breaks at every integer
-    labs(title = "PLS JUST WORJK!!!",
+    labs(title = "A tree depth of 6 is the most optimal within Cross-Validation",
          x = "Tree Depth",
          y = "MSE") +
     theme_minimal()
   
-  ##### tree model #####
+  ##### evt try LOOCV #####
+  ##### Try boosting via gbm or entropi #####
+  ##### Roc curve
+#### tree model ####
   # make with training
   tree_model_train <- rpart(variables,
                             data = train_data,
                             method = "class",
-                            control = rpart.control(maxdepth = 5,   # øg maks dybde
-                                                    minsplit = 5,    # lavere min split
+                            control = rpart.control(maxdepth = 6,   # øg maks dybde
+                                                    minsplit = 6,    # lavere min split
                                                     cp = 0))     # lavere kompleksitet
   rpart.plot(tree_model_train, type = 2, extra = 104, box.palette = "BuGn")
   tree_model_train$variable.importance
