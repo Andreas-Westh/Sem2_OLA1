@@ -6,6 +6,8 @@ library(gbm)
 library(rpart)
 library(caret)
 library(ggplot2)
+library(ggplot2)
+library(ggsoccer)
 
 # Make this for polish, dutch and total!!!!!
 
@@ -264,4 +266,18 @@ for (i in x_variables) {
   # is it better than baseline
 # Roc curce?
 
-             
+  #### Plots with xG ####
+  # Squares
+  ggplot(allshot_xG, aes(x = possession.endLocation.x, y = possession.endLocation.y)) +
+    annotate_pitch(fill = "grey20", colour = "white") +  
+    stat_summary_2d(aes(z = xG), fun = mean, bins = 60) +  
+    scale_fill_viridis_c(option = "inferno", name = "Mean xG") + 
+    theme_minimal() +
+    labs(title = "Highest xG cluster close to the goal",
+         x = "Pitch Length (%)",
+         y = "Pitch Width (%)") +
+    coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) 
+  
+  # More fluid?
+  
+  
