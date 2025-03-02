@@ -4,6 +4,9 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(ggsoccer)
+library(rpart.plot)
+library(randomForest)
+library(rpart)
 
 ui <- dashboardPage(
   skin = "blue",
@@ -43,6 +46,18 @@ ui <- dashboardPage(
                 label   = "Kropsdel:",
                 choices = c("right_foot", "left_foot", "head_or_other"),
                 selected = "right_foot"
+              ),
+              
+              box(
+                width = 12,
+                title = "Vælg Possession Duration",
+                sliderInput(
+                  inputId = "possession_duration",
+                  label = "Possession Duration (sekunder):",
+                  min = 0, max = 200, value = 50, step = 1
+                )
+              )
+              
               )
             ),
             
@@ -57,9 +72,13 @@ ui <- dashboardPage(
       )
     )
   )
-)
 
 server <- function(input, output, session) {
+  rf_model <- readRDS(here::here("Opgave5_xG-Modelling", "rsconnect", "rf_model.rds"))
+  input_df <- reactiveVal(data.frame(shot.bodyPart = character(), possession.duration = numeric(),
+                                     shot_angle_geom = numeric(), shot_distance = numeric()))
+  shot_distance <- reactiveVal(NA_real_)
+  shot_angle_geom <- reactiveVal(NA_real_)
   
   # -------------------------------------------------
   # Parametre for målet
@@ -145,10 +164,26 @@ server <- function(input, output, session) {
       # Sæt prik
       click_point(data.frame(x=x_val, y=y_val))
       
+      # Beregn distance
+      dist_to_goal <- sqrt((goal_x - x_val)^2 + (goal_center_y - y_val)^2)
+      
+      # Beregn vinkel
+      sx <- abs(goal_x - x_val)
+      sy <- abs(goal_center_y - y_val)
+      angle_deg <- atan2(goal_width * sx, sx^2 + sy^2 - (goal_width/2)^2) * 180 / pi
+      
+      
       # Beregn xG => gem i current_xg
       bp <- input$bodypart
       xg_val <- toy_xg_model(x_val, y_val, bp)
       current_xg(xg_val)
+      
+      input_df(data.frame(
+        shot.bodyPart = bp,
+        possession.duration = input$possession_duration,
+        shot_angle_geom = angle_deg,
+        shot_distance = dist_to_goal
+      ))
     }
   })
   
@@ -209,21 +244,22 @@ server <- function(input, output, session) {
       
       cat(sprintf(" -> (x,y) = (%.1f, %.1f)\n", x_val, y_val))
       
-      # Dist
+      # Calculate distance and angle here
       dist_to_goal <- sqrt((goal_x - x_val)^2 + (goal_center_y - y_val)^2)
-      cat(sprintf(" -> Distance til (%.0f,%.0f) = %.1f\n", goal_x, goal_center_y, dist_to_goal))
-      
-      # Vinkel
       sx <- abs(goal_x - x_val)
       sy <- abs(goal_center_y - y_val)
       angle_deg <- atan2(goal_width * sx, sx^2 + sy^2 - (goal_width/2)^2) * 180 / pi
+      
+      # Display the values
+      cat(sprintf(" -> Distance til (%.0f,%.0f) = %.1f\n", goal_x, goal_center_y, dist_to_goal))
       cat(sprintf(" -> Skydevinkel (geom) = %.2f grader\n", angle_deg))
       
-      # xG
+      # xG and other info
       bp <- input$bodypart
-      xg_val <- toy_xg_model(x_val, y_val, bp)
+      xg_val <- predict(rf_model, input_df(), type = "prob")[, "TRUE"]
       cat(sprintf(" -> Kropsdel = %s\n", bp))
-      cat(sprintf(" -> xG (toy-model) = %.3f\n", xg_val))
+      cat(sprintf(" -> Valgt Possession Duration: %d sekunder\n", input$possession_duration))
+      cat(sprintf(" -> xG = %.3f\n", xg_val))
     }
   })
   
