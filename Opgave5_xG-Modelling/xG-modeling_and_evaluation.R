@@ -21,23 +21,14 @@ library(ggsoccer)
 x_variables <- c("shot_angle_geom", 
                  "shot.bodyPart", 
                  "possession.duration", 
-                 #"position_category",
-                 #"late_game",
-                 #"from_counter",
                  "shot_distance"
                  )
-
-x_variables <- c("shot_angle_geom", "shot_distance", 
-                 "shot.bodyPart", 
-                 "position_category","from_counter")
-
-x_variables <- c("shot_angle_geom")
 
 # Add from counter
 
 variables <- as.formula(paste("shot.isGoal ~", paste(x_variables, collapse = " + ")))
+allshot_xG$shot.isGoal <- as.factor(allshot_xG$shot.isGoal) 
 
-f
 
 #### Splitting data #### 
 set.seed(123) # for reproducablility
@@ -48,8 +39,6 @@ train_index <- createDataPartition(y = allshot_xG$shot.isGoal,
 
 train_data <- allshot_xG[train_index,]
 test_data <- allshot_xG[-train_index,]
-train_data$shot.isGoal <- as.factor(train_data$shot.isGoal)
-test_data$shot.isGoal <- as.factor(test_data$shot.isGoal)
 
 train_data <- allshot_2122
 test_data <- allshot_2223
@@ -264,8 +253,13 @@ for (i in x_variables) {
           #
 # confusion matrix
   # is it better than baseline
-# Roc curce?
-
+# Roc curve:
+  library(pROC)
+  pred_probs <- predict(rf_model, test_data, type = "prob")[, "TRUE"] 
+  roc_curve <- roc(test_data$shot.isGoal, pred_probs)
+  plot(roc_curve, col = "blue", main = "ROC Curve for RF Model")
+  auc(roc_curve)
+  
   #### Plots with xG ####
   # Squares
   ggplot(allshot_xG, aes(x = possession.endLocation.x, y = possession.endLocation.y)) +
@@ -280,4 +274,8 @@ for (i in x_variables) {
   
   # More fluid?
   
+  
+  #### Save RDS for Shiny ####
+  saveRDS(allshot_xG,"allshot_xG.rds")
+  saveRDS(rf_model,"rf_model_simple.rds")  
   
