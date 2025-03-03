@@ -332,12 +332,45 @@ rf_tune <- train(variables, data = train_data, method = "rf",
            y = "Gini Index") +
       theme_minimal()
   
+    #### Plots with xG ####
+    # Squares
+    ggplot(allshot_xG, aes(x = possession.endLocation.x, y = possession.endLocation.y)) +
+      annotate_pitch(fill = "grey20", colour = "white") +  
+      stat_summary_2d(aes(z = xG), fun = mean, bins = 60) +  
+      scale_fill_viridis_c(option = "inferno", name = "Mean xG") + 
+      theme_minimal() +
+      labs(title = "Highest xG cluster close to the goal",
+           x = "Pitch Length (%)",
+           y = "Pitch Width (%)") +
+      coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) 
+    
+    # More fluid?
   
   
   
   
   
-  
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
   
   
   
@@ -587,19 +620,6 @@ rf_tune <- train(variables, data = train_data, method = "rf",
   plot(roc_curve, col = "blue", main = "ROC Curve for RF Model")
   auc(roc_curve)
   
-  #### Plots with xG ####
-  # Squares
-  ggplot(allshot_xG, aes(x = possession.endLocation.x, y = possession.endLocation.y)) +
-    annotate_pitch(fill = "grey20", colour = "white") +  
-    stat_summary_2d(aes(z = xG), fun = mean, bins = 60) +  
-    scale_fill_viridis_c(option = "inferno", name = "Mean xG") + 
-    theme_minimal() +
-    labs(title = "Highest xG cluster close to the goal",
-         x = "Pitch Length (%)",
-         y = "Pitch Width (%)") +
-    coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) 
-  
-  # More fluid?
   
   
   #### Save RDS for Shiny ####
