@@ -7,9 +7,21 @@ library(ggplot2)
 library(ggsoccer)
 library(mltools)
 library(ranger)
+library(pROC)
+library(dplyr)
 
 
 # Make this for polish, dutch and total!!!!!
+#allshot_xG_backup <- allshot_xG
+allshot_xG <- allshot_xG_backup
+
+
+#For dutch
+allshot_xG <- allshot_xG %>% 
+  filter(matchId %in% polish_matches_2122$id)
+
+
+
 # TEST ALL FOR WITHOUT DURATION
 
 
@@ -51,7 +63,7 @@ table(test_data$shot.isGoal)
 
 prop.table(table(train_data$shot.isGoal))
 prop.table(table(test_data$shot.isGoal))
-# Very close 
+  # Very close 
 
 ##### Pltos #####
             # combine training and test sets with a label
@@ -78,8 +90,15 @@ prop.table(table(test_data$shot.isGoal))
 
 #### GLM ####
   # make with training
-            glm_result <- data.frame(x_variable = character(), p_value = numeric(), p_stars = character())
+            # Initialiser data frame til resultater
+            glm_result <- data.frame(
+              x_variable = character(),
+              coefficient = numeric(),
+              p_value = numeric(),
+              p_stars = character()
+            )
             
+            # Funktion til at tildele signifikansstjerner
             get_significance_stars <- function(p) {
               if (p < 0.001) {
                 return("***")
@@ -94,16 +113,30 @@ prop.table(table(test_data$shot.isGoal))
               }
             }
             
+            # Loop gennem alle forklarende variable
             for (i in x_variables) {
-              #Sys.sleep(0.5)
               formula_glm <- as.formula(paste("shot.isGoal ~", i))
               glm_model <- glm(formula_glm, data = train_data, family = "binomial")
-              glm_pval <- summary(glm_model)$coefficients[2,4]
+              
+              # Udtræk koefficient og p-værdi for den pågældende variabel
+              glm_coeff <- summary(glm_model)$coefficients[2,1]  # Koefficient
+              glm_pval <- summary(glm_model)$coefficients[2,4]  # P-værdi
               glm_stars <- get_significance_stars(glm_pval)
               
-              tmp_glm <- data.frame(x_variable = i, p_value = as.numeric(glm_pval), p_stars = glm_stars)
+              # Gem resultater i data frame
+              tmp_glm <- data.frame(
+                x_variable = i,
+                coefficient = as.numeric(glm_coeff),
+                p_value = as.numeric(glm_pval),
+                p_stars = glm_stars
+              )
+              
               glm_result <- rbind(glm_result, tmp_glm)
             }
+            
+          glm_result$coefficient <- round(glm_result$coefficient,2)
+          glm_result$p_value <- round(glm_result$p_value,4)
+            
             
               glm_train <- glm(variables, 
                                data = train_data, 
@@ -123,7 +156,7 @@ train_control <- trainControl(method = "cv", number = 5)
 rf_tune <- train(variables, data = train_data, method = "rf",
                   trControl = train_control, 
                   tuneGrid = rf_grid,
-                  ntree = 1000)  # Angiv ntree separat
+                  ntree = 500)  
 
 
   # Udskriv den bedste model baseret på CV
@@ -144,7 +177,7 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     
     results$AUC[i] <- auc_score
   }
-  
+  results <- results %>% arrange(desc(AUC))
   print(results)
   
   rf_model <- randomForest(variables, 
@@ -176,16 +209,16 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     threshold_results$Accuracy[i] <- round(acc_score, 5)
     best_threshold <- threshold_results$Threshold[which.max(threshold_results$Accuracy)]
   }
-  # 0.79
+  # 0.88
   
-  rf_preds <- ifelse(rf_test > 0.79, "TRUE", "FALSE")
+  rf_preds <- ifelse(rf_test > 0.88, "TRUE", "FALSE")
   
   #### Evaluate accuracy af ####
   rf_confusion <- confusionMatrix(as.factor(rf_preds), as.factor(test_data$shot.isGoal))
   rf_confusion
   
   allshot_xG$xG <- predict(rf_model, allshot_xG, type = "prob")[, "TRUE"]
-  rf_xG_preds <- ifelse(allshot_xG$xG > 0.79, "TRUE", "FALSE")
+  rf_xG_preds <- ifelse(allshot_xG$xG > 0.77, "TRUE", "FALSE")
   confusion_total <- confusionMatrix(as.factor(rf_xG_preds), as.factor(allshot_xG$shot.isGoal))
   confusion_total
   
@@ -196,7 +229,9 @@ rf_tune <- train(variables, data = train_data, method = "rf",
   allshot_xG$Gini_Index <- 1 - (allshot_xG$xG^2 + (1 - allshot_xG$xG)^2)
   mean_gini_index <- mean(allshot_xG$Gini_Index)
   print(mean_gini_index)
-  # 0.1111 good, 0.5 is guess, 0 is perfect
+  # 0.111 good, 0.5 is guess, 0 is perfect
+  # 0.117 in dutch
+  # 0.107
   
   ##### MSE #####
   allshot_xG$shot.isGoal_numeric <- ifelse(allshot_xG$shot.isGoal == "TRUE", 1, 0)
@@ -235,7 +270,7 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     mse_wyscout <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal_numeric)^2)
     mse_wyscout
     
-    wyscout_preds <- ifelse(allshot_xG$shot.xg > 0.79, "TRUE", "FALSE")
+    wyscout_preds <- ifelse(allshot_xG$shot.xg > 0.77, "TRUE", "FALSE")
     wyscout_confusion <- confusionMatrix(as.factor(wyscout_preds), as.factor(allshot_xG$shot.isGoal))
     wyscout_confusion
     
@@ -356,34 +391,54 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     
   
   
-  
-  
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
   
   
   
   
-  
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
   
   
   

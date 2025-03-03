@@ -1,6 +1,7 @@
 library(dplyr)
 library(jsonlite)
 library(mongolite)
+library(stringr)
 
 
 # Retrieve data from mongo

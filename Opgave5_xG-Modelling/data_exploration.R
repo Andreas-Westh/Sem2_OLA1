@@ -130,12 +130,12 @@ allshot_xG <- allshot_xG %>%
 hist(allshot_xG$shot_angle_geom)
 
 # define goal parameters
-goal_width <- 7.32  # width of the goal in meters
+goal_width <- 11.43  # width of the goal in meters
 goal_center_y <- 50  # center of the goal
 goal_x <- 100        # goal line x-coordinate
 
 # calculate the shot angle using the geometry of shooting method
-allshot <- allshot %>%
+allshot_xG <- allshot_xG %>%
   mutate(
     x = abs(goal_x - possession.endLocation.x),  # distance to goal line
     y = abs(possession.endLocation.y - goal_center_y),  # lateral distance from goal center
@@ -172,7 +172,8 @@ allshot_xG$possession_duration_cat <- cut(
 
 
 # 3 Distance
-
+allshot_xG$shot_distance <- sqrt((100 - allshot_xG$possession.endLocation.x)^2 + 
+                                   (50 - allshot_xG$possession.endLocation.y)^2)
 # 4 Minute
 # 5 Assist type
 # 6 assist posision/length
