@@ -151,8 +151,16 @@ tmp_penalty_shots <- allshot %>%
 hist(allshot$shot_angle)
 
 #### Duration ####
-hist(allshot_xG$possession.duration)
+hist(allshot_xG$possession.duration, breaks = 50, col = "gray", main = "Histogram of possession duration")
 summary(allshot_xG$possession.duration)
+quantile(allshot_xG$possession.duration, probs = seq(0, 1, 0.1), na.rm = TRUE)
+table(cut(allshot_xG$possession.duration, breaks = seq(0, max(allshot_xG$possession.duration), by = 10)))
+allshot_xG$possession_duration_cat <- cut(
+  allshot_xG$possession.duration,
+  breaks = c(-Inf, 3.5, 9, 17, 35, Inf),
+  labels = c("Meget kort", "Kort", "Mellem", "Lang", "Meget lang"),
+  right = TRUE
+)
 
 
 #### Y er KUN 100, ligesom x, de er normaliceret, der er ikek taget højde for at y er længere end x
