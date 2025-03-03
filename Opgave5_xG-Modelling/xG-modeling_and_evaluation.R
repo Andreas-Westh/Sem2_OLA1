@@ -345,7 +345,15 @@ rf_tune <- train(variables, data = train_data, method = "rf",
       coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) 
     
     # More fluid?
-  
+
+    #### Singular tree-model ####
+    singular_tree <- rpart(variables,
+                           data = train_data,
+                           method = "class",
+                           control = rpart.control(maxdepth = best_depth_mse, cp = 0.005))
+    rpart.plot(singular_tree, type = 2, extra = 104, box.palette = "BuGn")
+    singular_tree$variable.importance
+    
   
   
   
