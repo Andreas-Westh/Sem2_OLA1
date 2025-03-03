@@ -150,6 +150,9 @@ tmp_penalty_shots <- allshot %>%
   select(possession.endLocation.x, possession.endLocation.y, shot_angle_geom)
 hist(allshot$shot_angle)
 
+#### Duration ####
+hist(allshot_xG$possession.duration)
+summary(allshot_xG$possession.duration)
 
 
 #### Y er KUN 100, ligesom x, de er normaliceret, der er ikek taget højde for at y er længere end x
