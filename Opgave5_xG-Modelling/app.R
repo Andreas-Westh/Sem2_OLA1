@@ -48,16 +48,6 @@ ui <- dashboardPage(
                 selected = "right_foot"
               ),
               
-              box(
-                width = 12,
-                title = "Vælg Possession Duration",
-                sliderInput(
-                  inputId = "possession_duration",
-                  label = "Possession Duration (sekunder):",
-                  min = 0, max = 200, value = 50, step = 1
-                )
-              )
-              
               )
             ),
             
@@ -74,8 +64,8 @@ ui <- dashboardPage(
   )
 
 server <- function(input, output, session) {
-  rf_model <- readRDS(here::here("Opgave5_xG-Modelling", "rsconnect", "rf_model.rds"))
-  input_df <- reactiveVal(data.frame(shot.bodyPart = character(), possession.duration = numeric(),
+  rf_model <- readRDS(here::here("Opgave5_xG-Modelling", "rsconnect", "rf_model_simple.rds"))
+  input_df <- reactiveVal(data.frame(shot.bodyPart = character(),
                                      shot_angle_geom = numeric(), shot_distance = numeric()))
   shot_distance <- reactiveVal(NA_real_)
   shot_angle_geom <- reactiveVal(NA_real_)
@@ -83,7 +73,7 @@ server <- function(input, output, session) {
   # -------------------------------------------------
   # Parametre for målet
   # -------------------------------------------------
-  goal_width    <- 7.32
+  goal_width    <- 11.43
   goal_center_y <- 50
   goal_x        <- 100
   
@@ -180,7 +170,6 @@ server <- function(input, output, session) {
       
       input_df(data.frame(
         shot.bodyPart = bp,
-        possession.duration = input$possession_duration,
         shot_angle_geom = angle_deg,
         shot_distance = dist_to_goal
       ))
@@ -258,7 +247,6 @@ server <- function(input, output, session) {
       bp <- input$bodypart
       xg_val <- predict(rf_model, input_df(), type = "prob")[, "TRUE"]
       cat(sprintf(" -> Kropsdel = %s\n", bp))
-      cat(sprintf(" -> Valgt Possession Duration: %d sekunder\n", input$possession_duration))
       cat(sprintf(" -> xG = %.3f\n", xg_val))
     }
   })
