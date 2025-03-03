@@ -235,8 +235,8 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     mse_wyscout <- mean((allshot_xG$shot.xg - allshot_xG$shot.isGoal_numeric)^2)
     mse_wyscout
     
-    wyscout_preds <- ifelse(test_data$shot.xg > 0.79, "TRUE", "FALSE")
-    wyscout_confusion <- confusionMatrix(as.factor(wyscout_preds), as.factor(test_data$shot.isGoal))
+    wyscout_preds <- ifelse(allshot_xG$shot.xg > 0.79, "TRUE", "FALSE")
+    wyscout_confusion <- confusionMatrix(as.factor(wyscout_preds), as.factor(allshot_xG$shot.isGoal))
     wyscout_confusion
     
   
