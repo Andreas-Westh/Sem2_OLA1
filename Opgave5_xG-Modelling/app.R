@@ -10,17 +10,17 @@ library(rpart)
 
 ui <- dashboardPage(
   skin = "blue",
-  dashboardHeader(title = "xG-Calculator2000"),
+  dashboardHeader(title = "xG-Calculator"),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("xG-Calculator2000", tabName = "grid_bane", selected = TRUE)
+      menuItem("xG-Calculator", tabName = "grid_bane", selected = TRUE)
     )
   ),
   dashboardBody(
     tabItems(
       tabItem(
         tabName = "grid_bane",
-        h2("xG baseret på distance fra mål, vinkel, kropsdel og ny xG-MODEL2000"),
+        h2("Dynamisk xG-Beregner, på baggrund af simplificeret RandomForest"),
         fluidRow(
           box(
             width = 8,
@@ -48,20 +48,20 @@ ui <- dashboardPage(
                 selected = "right_foot"
               ),
               
-              )
-            ),
-            
-            box(
-              width = 12,
-              title = "Skud-indikator",
-              imageOutput("player_img", height = "auto")
             )
-            
+          ),
+          
+          box(
+            width = 12,
+            title = "Skud-indikator",
+            imageOutput("player_img", height = "auto")
           )
+          
         )
       )
     )
   )
+)
 
 server <- function(input, output, session) {
   rf_model <- readRDS(here::here("Opgave5_xG-Modelling", "rsconnect", "rf_model_simple.rds"))
@@ -264,21 +264,21 @@ server <- function(input, output, session) {
     #   else if xg < 0.2 => gul.png
     #   else => gron.png
     
-    imgfile <- "sort.png"  # default
+    imgfile <- "Opgave5_xG-Modelling/Spiller_indikator/sort.png"  # default
     
     if (!is.na(xg_now)) {
       if (xg_now < 0.1) {
-        imgfile <- "rod.png"
+        imgfile <- "Opgave5_xG-Modelling/Spiller_indikator/rod.png"
       } else if (xg_now < 0.2) {
-        imgfile <- "gul.png"
+        imgfile <- "Opgave5_xG-Modelling/Spiller_indikator//gul.png"
       } else {
-        imgfile <- "gron.png"
+        imgfile <- "Opgave5_xG-Modelling/Spiller_indikator//gron.png"
       }
     }
     
     # Returner stien i www + attributter
     list(
-      src = file.path("Documents/DAL-Projects/2.semester/flow1/FObold/Spiller_indikator/", imgfile),
+      src = file.path("Opgave5_xG-Modelling/Spiller_indikator/", imgfile),
       contentType = "image/png",
       alt = "Skud-indikator",
       width = "70%"  
@@ -288,5 +288,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
-
