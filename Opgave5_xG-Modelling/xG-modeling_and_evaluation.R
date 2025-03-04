@@ -18,7 +18,7 @@ allshot_xG <- allshot_xG_backup
 
 #For dutch
 allshot_xG <- allshot_xG %>% 
-  filter(matchId %in% polish_matches_2122$id)
+  filter(matchId %in% dutch_matches_2122$id)
 
 
 
@@ -209,9 +209,9 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     threshold_results$Accuracy[i] <- round(acc_score, 5)
     best_threshold <- threshold_results$Threshold[which.max(threshold_results$Accuracy)]
   }
-  # 0.88
+  # 0.76
   
-  rf_preds <- ifelse(rf_test > 0.88, "TRUE", "FALSE")
+  rf_preds <- ifelse(rf_test > 0.76, "TRUE", "FALSE")
   
   #### Evaluate accuracy af ####
   rf_confusion <- confusionMatrix(as.factor(rf_preds), as.factor(test_data$shot.isGoal))
@@ -274,48 +274,30 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     wyscout_confusion <- confusionMatrix(as.factor(wyscout_preds), as.factor(allshot_xG$shot.isGoal))
     wyscout_confusion
     
-  
+    library(pROC)
+    roc_curve <- roc(allshot_xG$shot.isGoal, allshot_xG$shot.xg)
+
+    auc_value <- auc(roc_curve)
+    print(auc_value)
+
+    
   
     
     
     #### ERROR !!!Find the best depth for a single tree-model using Gini Index ####
-    depth_range <- 20
-    gini_train <- numeric(depth_range)
-    gini_test <- numeric(depth_range)
+    library(rpart)
+    library(caret)
+    
+    depth_range <- 8
     gini_cv <- numeric(depth_range)
+    entropy_cv <- numeric(depth_range)
     
-    mse_train <- numeric(depth_range)
-    mse_test <- numeric(depth_range)
-    mse_cv <- numeric(depth_range)
-    
-    # Create amount of folds for CV
+    # Create folds for cross-validation
     folds <- createFolds(train_data$shot.isGoal, k = 5, list = TRUE)  
     
     for (i in 1:depth_range) {
-      tree_loop <- rpart(variables,
-                         data = train_data,
-                         method = "class",
-                         control = rpart.control(maxdepth = i, cp = 0.01))  
-      
-      # Predict probabilities
-      loop_train <- predict(tree_loop, newdata = train_data, type = "prob")[, "TRUE"]
-      loop_test <- predict(tree_loop, newdata = test_data, type = "prob")[, "TRUE"]
-      
-      # Convert shot.isGoal to numeric (0/1)
-      goal_numeric_train <- ifelse(train_data$shot.isGoal == "TRUE", 1, 0)
-      goal_numeric_test <- ifelse(test_data$shot.isGoal == "TRUE", 1, 0)
-      
-      # Compute Gini Index for train and test sets
-      gini_train[i] <- mean(1 - (loop_train^2 + (1 - loop_train)^2))
-      gini_test[i] <- mean(1 - (loop_test^2 + (1 - loop_test)^2))
-      
-      # Compute MSE for train and test sets
-      mse_train[i] <- mean((loop_train - goal_numeric_train)^2)
-      mse_test[i] <- mean((loop_test - goal_numeric_test)^2)
-      
-      # Cross-validation for Gini & MSE
       gini_folds <- numeric(5)
-      mse_folds <- numeric(5)
+      entropy_folds <- numeric(5)
       
       for (f in 1:5) {
         train_idx <- setdiff(seq_len(nrow(train_data)), folds[[f]])
@@ -327,37 +309,36 @@ rf_tune <- train(variables, data = train_data, method = "rf",
                          control = rpart.control(maxdepth = i, cp = 0.01))
         
         loop_val <- predict(tree_cv, newdata = train_data[val_idx, ], type = "prob")[, "TRUE"]
-        goal_numeric_val <- ifelse(train_data$shot.isGoal[val_idx] == "TRUE", 1, 0)
         
+        # Beregn Gini Index
         gini_folds[f] <- mean(1 - (loop_val^2 + (1 - loop_val)^2))
-        mse_folds[f] <- mean((loop_val - goal_numeric_val)^2)
+        
+        # Beregn Entropi
+        entropy_folds[f] <- mean(-loop_val * log2(loop_val + 1e-9) - (1 - loop_val) * log2(1 - loop_val + 1e-9))
       }
       
       gini_cv[i] <- mean(gini_folds)
-      mse_cv[i] <- mean(mse_folds)
+      entropy_cv[i] <- mean(entropy_folds)
     }
     
-    # Find the best depth based on Cross-Validation
+    # Find den bedste dybde baseret på lavest impuritet
     best_depth_gini <- which.min(gini_cv)
-    best_depth_mse <- which.min(mse_cv)
+    best_depth_entropy <- which.min(entropy_cv)
     
-    cat("Best depth based on Gini Index:", best_depth_gini, "\n")
-    cat("Best depth based on MSE:", best_depth_mse, "\n")
+    # Print de bedste dybder
+    cat("Bedste trædybde baseret på Gini:", best_depth_gini, "\n")
+    cat("Bedste trædybde baseret på Entropi:", best_depth_entropy, "\n")
     
-    
-    # Find the best depth (lowest CV Gini Index)
-    best_depth <- which.min(gini_cv)
-    
-    # Print results
-    cat("Best tree depth based on Gini Index:", best_depth, "\n")
   
-    # Gini Index plot
+    
+    # Opret dataframe til plotting
     depth_results_gini <- data.frame(
       maxdepth = rep(1:depth_range, 3),
       Value = c(gini_train, gini_test, gini_cv),
       Type = rep(c("Training", "Test", "Cross-Validation"), each = depth_range)
     )
     
+    # Plot Gini Index
     ggplot(depth_results_gini, aes(x = maxdepth, y = Value, color = Type)) +
       geom_point() +
       geom_line() +
@@ -366,6 +347,7 @@ rf_tune <- train(variables, data = train_data, method = "rf",
            x = "Tree Depth",
            y = "Gini Index") +
       theme_minimal()
+    
   
     #### Plots with xG ####
     # Squares
@@ -390,7 +372,7 @@ rf_tune <- train(variables, data = train_data, method = "rf",
     singular_tree$variable.importance
     
   
-  
+  #saveRDS(rf_model,"rf_model_simple.rds")
 
   
   
