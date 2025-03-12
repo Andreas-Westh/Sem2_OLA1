@@ -29,7 +29,7 @@ allpasses_test <- allpasses %>%
   group_by(player.name, matchId) %>%
   summarise(player_passes = n(), .groups = "drop") %>%  # Antal afleveringer pr. kamp
   group_by(player.name) %>%
-  summarise(player_avgpass = mean(player_passes, na.rm = TRUE))  # Gennemsnit pr. spiller
+  summarise(player_avgpass = mean(player_passes))  # Gennemsnit pr. spiller
 
 allpasses <- allpasses %>%
   left_join(allpasses_test, by = "player.name")
@@ -88,19 +88,22 @@ fviz_pca_var(data.pca, col.var = "black")
 # opsummering i spiler statestik
 player_stats <- allpasses %>%
   group_by(player.name) %>%
+  filter(n() > 100) %>% 
   summarise(
     matches_played = n_distinct(matchId),    
     total_passes = n(),                      
     avg_passes_per_match = total_passes / matches_played, 
+    # giver fejl: sd_passes_per_match = sd(player_passes_per_match$total_passes_per_match),
     avg_pass_length = mean(pass.length),
     sd_pass_lenght = sd(pass.length),
     avg_pass_angle = mean(pass.angle),
+    sd_pass_angle = sd(pass.angle),
     pass_acc = (sum(pass.accurate == TRUE) / total_passes) * 100,
     cluster_1 = sum(cluster == 1),
     cluster_2 = sum(cluster == 2), 
     cluster_3 = sum(cluster == 3),
     cluster_4 = sum(cluster == 4)
-  ) %>% filter(total_passes > 100)
+  )
 
 # finde en spillers main cluster
 player_stats <- player_stats %>%
@@ -112,7 +115,16 @@ player_stats <- player_stats %>%
 
 
 # plots
-p <- plot_ly(
+ggplot(player_stats, aes(x = as.factor(main_cluster))) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Number of Players per Main Cluster",
+       x = "Main Cluster",
+       y = "Number of Players") +
+  theme_minimal()
+
+
+
+plot_ly(
   data = player_stats,
   x=~total_passes,y=~avg_pass_length,z=~avg_pass_angle,
   type = "scatter3d",
@@ -122,10 +134,24 @@ p <- plot_ly(
     "Player: ",player.name,"<br>",
     "Main cluster: ",main_cluster,"<br>",
     "Cluster 1: ",cluster_1, ", Cluster 2: ", cluster_2, ", Cluster 3: ",cluster_3, ", Cluster 4: ", cluster_4,"<br>",
-    "Total passes:",total_passes,"<br>",
-    "Avg pass length:",round(avg_pass_length,1),"<br>",
-    "Avg pass angle:",round(avg_pass_angle,1),"<br>"
+    "Total passes: ",total_passes,"<br>",
+    "Avg pass length: ",round(avg_pass_length,1),"<br>",
+    "Avg pass angle: ",round(avg_pass_angle,1),"<br>"
   ),
-  hoverinfo="text"
-)
-p
+  hoverinfo="text")
+
+plot_ly(
+  data = player_stats,
+  x=~total_passes,y=~sd_pass_lenght,z=~avg_pass_angle,
+  type = "scatter3d",
+  mode = "markers",
+  color = ~as.factor(main_cluster),
+  text = ~paste0(
+    "Player: ",player.name,"<br>",
+    "Main cluster: ",main_cluster,"<br>",
+    "Cluster 1: ",cluster_1, ", Cluster 2: ", cluster_2, ", Cluster 3: ",cluster_3, ", Cluster 4: ", cluster_4,"<br>",
+    "Total passes: ",total_passes,"<br>",
+    "Avg pass length: ",round(avg_pass_length,1),"<br>",
+    "Avg pass angle: ",round(avg_pass_angle,1),"<br>"
+  ),
+  hoverinfo="text")
