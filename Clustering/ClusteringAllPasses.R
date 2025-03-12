@@ -72,8 +72,60 @@ clusters <- df %>% group_by(cluster) %>%
     count = n()
   )
 
+allpasses$cluster <- as.factor(kmod$cluster)
+player_cluster <- allpasses[,c("team.id","team.name","player.position")]
+player_cluster <- allpasses %>% group_by(player.name)
+
+
 # pca
 data.pca <- princomp(df_sampled)
 summary(data.pca)
 data.pca$loadings[, 1:3]
 fviz_pca_var(data.pca, col.var = "black")
+
+
+
+# opsummering i spiler statestik
+player_stats <- allpasses %>%
+  group_by(player.name) %>%
+  summarise(
+    matches_played = n_distinct(matchId),    
+    total_passes = n(),                      
+    avg_passes_per_match = total_passes / matches_played, 
+    avg_pass_length = mean(pass.length),
+    sd_pass_lenght = sd(pass.length),
+    avg_pass_angle = mean(pass.angle),
+    pass_acc = (sum(pass.accurate == TRUE) / total_passes) * 100,
+    cluster_1 = sum(cluster == 1),
+    cluster_2 = sum(cluster == 2), 
+    cluster_3 = sum(cluster == 3),
+    cluster_4 = sum(cluster == 4)
+  ) %>% filter(total_passes > 100)
+
+# finde en spillers main cluster
+player_stats <- player_stats %>%
+  mutate(main_cluster = max.col(across(starts_with("cluster_"))))
+
+# Måske også finde spillerens primære position? 
+
+
+
+
+# plots
+p <- plot_ly(
+  data = player_stats,
+  x=~total_passes,y=~avg_pass_length,z=~avg_pass_angle,
+  type = "scatter3d",
+  mode = "markers",
+  color = ~as.factor(main_cluster),
+  text = ~paste0(
+    "Player: ",player.name,"<br>",
+    "Main cluster: ",main_cluster,"<br>",
+    "Cluster 1: ",cluster_1, ", Cluster 2: ", cluster_2, ", Cluster 3: ",cluster_3, ", Cluster 4: ", cluster_4,"<br>",
+    "Total passes:",total_passes,"<br>",
+    "Avg pass length:",round(avg_pass_length,1),"<br>",
+    "Avg pass angle:",round(avg_pass_angle,1),"<br>"
+  ),
+  hoverinfo="text"
+)
+p
