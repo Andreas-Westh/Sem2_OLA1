@@ -112,6 +112,8 @@ player_stats <- player_stats %>%
 # Måske også finde spillerens primære position? 
 
 
+# Lav nogle fodboldbane plots
+
 
 
 # plots

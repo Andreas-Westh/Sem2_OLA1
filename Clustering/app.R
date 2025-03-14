@@ -40,8 +40,8 @@ sample_indices <- sample(1:nrow(df_scaled), sample_size)
 df_sampled <- df_scaled[sample_indices, ]
 
 # Precompute elbow plot data
-dftwss <- data.frame(k = 1:20, twss = NA)
-for (i in 1:20) {
+dftwss <- data.frame(k = 1:15, twss = NA)
+for (i in 1:15) {
   tmod <- kmeans(df_sampled, centers = i, nstart = 10, iter.max = 500)
   dftwss[i, 'twss'] <- tmod$tot.withinss
 }
@@ -55,7 +55,7 @@ colnames(pca_scores) <- c("PC1", "PC2")
 ui <- dashboardPage(
   dashboardHeader(title = "Football Pass Clustering App"),
   dashboardSidebar(
-    sliderInput("k", "Number of Clusters:", min = 1, max = 20, value = 4, step = 1)
+    sliderInput("k", "Number of Clusters:", min = 1, max = 15, value = 4, step = 1)
   ),
   dashboardBody(
     fluidRow(
