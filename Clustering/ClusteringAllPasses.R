@@ -28,19 +28,15 @@ corrplot::corrplot(passes_Corr,addCoef.col = "black",method = "square",type = "l
 allpasses_test <- allpasses %>% 
   group_by(player.name, matchId) %>%
   summarise(player_passes = n(),
-            avg_y = mean(location.y),
-            avg_x = mean(location.x),
             .groups = "drop") %>%  # Antal afleveringer pr. kamp
   group_by(player.name) %>%
-  summarise(player_avgpass = mean(player_passes),
-            avg_y = mean(avg_y),
-            avg_z = mean(avg_x))  # Gennemsnit pr. spiller
+  summarise(player_avgpass = mean(player_passes))  # Gennemsnit pr. spiller
 
 allpasses <- allpasses %>%
   left_join(allpasses_test, by = "player.name")
 
 # evt add the player avg passes, if cluster is unclean
-df <- allpasses[, c("pass.angle","pass.length","location.x","location.y")]
+df <- allpasses[, c("pass.angle","pass.length","location.x","location.y","player_avgpass")]
 df_scaled <- as.data.frame(scale(df))
 
 set.seed(1970)
