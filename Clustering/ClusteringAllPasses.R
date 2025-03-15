@@ -119,14 +119,14 @@ player_stats <- player_stats %>%
 # Måske også finde spillerens primære position? 
 
 
-# Lav nogle fodboldbane plots
+#### Loop heatmap pass location ####
 for (k in 1:5) {
   ggplot(allpasses %>% filter(cluster == k)) +
-    annotate_pitch(colour = "white", fill = "gray") +  # Soccer pitch
+    annotate_pitch(colour = "white", fill = "gray") +  
     stat_density_2d_filled(aes(x = location.x, y = location.y), 
-                           alpha = 0.7, contour_var = "ndensity") +  # Normalized density
+                           alpha = 0.7, contour_var = "ndensity") +  
     theme_pitch() +
-    scale_fill_viridis_d(option = "magma") +  # Corrected discrete fill scale
+    scale_fill_viridis_d(option = "magma") +  
     labs(title = paste("Passes Positions Heatmap - Cluster", k),
          x = "Pitch Length", y = "Pitch Width") +
     theme(legend.position = "right") -> p
@@ -134,28 +134,59 @@ for (k in 1:5) {
   print(p)
 }
 
-
-ggplot(allpasses) +
-  annotate_pitch(colour = "white", fill = "gray") +  # Soccer pitch
-  stat_density_2d_filled(aes(x = location.x, y = location.y, fill = as.factor(cluster)), 
-                         alpha = 0.6, contour_var = "ndensity") +  # Normalized density for smooth contours
-  theme_pitch() +
-  scale_fill_manual(values = c("red", "blue", "green", "purple", "orange")) +  # Assign colors to clusters
-  labs(title = "Combined Smooth Heatmap of Pass Positions by Cluster",
-       x = "Pitch Length", y = "Pitch Width", fill = "Cluster") +
-  theme(legend.position = "right")
-
-
-
-# plots
-ggplot(player_stats, aes(x = as.factor(main_cluster))) +
-  geom_bar(fill = "steelblue") +
-  labs(title = "Number of Players per Main Cluster",
-       x = "Main Cluster",
-       y = "Number of Players") +
-  theme_minimal()
+for (k in 1:5) {
+  ggplot(allpasses %>% filter(cluster == k)) +
+    annotate_pitch(colour = "white", fill = "gray") +  
+    stat_density_2d_filled(aes(x = possession.endLocation.x, y = possession.endLocation.y), 
+                           alpha = 0.7, contour_var = "ndensity") +  
+    theme_pitch() +
+    scale_fill_viridis_d(option = "magma") +  
+    labs(title = paste("Passes End Positions Heatmap - Cluster", k),
+         x = "Pitch Length", y = "Pitch Width") +
+    theme(legend.position = "right") -> p_end
+  
+  print(p_end)
+}
 
 
+#### General plots ####
+allplayers_roles <- allplayers[,c("shortName","role.name")]
+allplayers_roles <- allplayers_roles %>% rename(player.name = shortName)
+  player_stats <- player_stats %>%
+    left_join(allplayers_roles, by = "player.name")
+  
+  # number of player per role
+  ggplot(player_stats, aes(x = as.factor(role.name), fill = role.name)) +
+    geom_bar() +
+    labs(title = "number in every role",
+         x = "Main Cluster",
+         y = "Number of Players") +
+    theme_minimal()
+  
+  # roles in each cluster
+  ggplot(player_stats, aes(x = as.factor(main_cluster), fill = role.name)) +
+    geom_bar() +
+    labs(title = "Number of Players per Main Cluster",
+         x = "Main Cluster",
+         y = "Number of Players") +
+    theme_minimal()
+  
+
+plot_ly(
+  data = player_stats,
+  x=~avg_x,y=~avg_y,z=~main_cluster,
+  type = "scatter3d",
+  mode = "markers",
+  color = ~as.factor(main_cluster),
+  text = ~paste0(
+    "Player: ",player.name,"<br>",
+    "Main cluster: ",main_cluster,"<br>",
+    "Cluster 1: ",cluster_1, ", Cluster 2: ", cluster_2, ", Cluster 3: ",cluster_3, ", Cluster 4: ", cluster_4,"<br>",
+    "Total passes: ",total_passes,"<br>",
+    "Avg pass length: ",round(avg_pass_length,1),"<br>",
+    "Avg pass angle: ",round(avg_pass_angle,1),"<br>"
+  ),
+  hoverinfo="text")
 
 plot_ly(
   data = player_stats,
