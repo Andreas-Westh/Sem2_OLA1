@@ -15,7 +15,7 @@ allshots <- jsonlite::flatten(allshots)
 allplayers <- jsonlite::flatten(allplayers)
 
 
-clustering_vars <- allpasses[, c("pass.angle", "pass.length")]
+clustering_vars <- allpasses[, c("pass.angle", "pass.length","location.x","location.y")]
 # pass success
 
 
@@ -27,15 +27,20 @@ corrplot::corrplot(passes_Corr,addCoef.col = "black",method = "square",type = "l
 
 allpasses_test <- allpasses %>% 
   group_by(player.name, matchId) %>%
-  summarise(player_passes = n(), .groups = "drop") %>%  # Antal afleveringer pr. kamp
+  summarise(player_passes = n(),
+            avg_y = mean(location.y),
+            avg_x = mean(location.x),
+            .groups = "drop") %>%  # Antal afleveringer pr. kamp
   group_by(player.name) %>%
-  summarise(player_avgpass = mean(player_passes))  # Gennemsnit pr. spiller
+  summarise(player_avgpass = mean(player_passes),
+            avg_y = mean(avg_y),
+            avg_z = mean(avg_x))  # Gennemsnit pr. spiller
 
 allpasses <- allpasses %>%
   left_join(allpasses_test, by = "player.name")
 
-
-df <- allpasses[, c("pass.angle","pass.length","player_avgpass")]
+# evt add the player avg passes, if cluster is unclean
+df <- allpasses[, c("pass.angle","pass.length","location.x","location.y")]
 df_scaled <- as.data.frame(scale(df))
 
 set.seed(1970)
@@ -56,6 +61,7 @@ ggplot(dftwss, aes(x = k, y = twss)) +
   labs(title = "Elbow Method for Optimal K",
        x = "Number of Clusters (K)",
        y = "Total Within-Cluster Sum of Squares") +
+  scale_x_continuous(breaks = scales::breaks_width(1)) +
   theme_minimal()
 
 
@@ -69,6 +75,8 @@ clusters <- df %>% group_by(cluster) %>%
     pass.angle = mean(pass.angle),
     pass.length = mean(pass.length),
     player_avgpass = mean(player_avgpass),
+    player_avg_y = mean(location.y),
+    player_avg_x = mean(location.x),
     count = n()
   )
 
