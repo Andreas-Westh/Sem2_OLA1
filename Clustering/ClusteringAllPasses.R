@@ -62,7 +62,7 @@ ggplot(dftwss, aes(x = k, y = twss)) +
 
 
 #kmeans cluster
-kmod <- kmeans(df_scaled, nstart = 10, centers = 4)
+kmod <- kmeans(df_scaled, nstart = 10, centers = 5)
 fviz_cluster(kmod, data = df_scaled)
 df$cluster <- as.factor(kmod$cluster)
 
@@ -102,11 +102,14 @@ player_stats <- allpasses %>%
     sd_pass_lenght = sd(pass.length),
     avg_pass_angle = mean(pass.angle),
     sd_pass_angle = sd(pass.angle),
+    avg_y = mean(location.y),
+    avg_x = mean(location.x),
     pass_acc = (sum(pass.accurate == TRUE) / total_passes) * 100,
     cluster_1 = sum(cluster == 1),
     cluster_2 = sum(cluster == 2), 
     cluster_3 = sum(cluster == 3),
-    cluster_4 = sum(cluster == 4)
+    cluster_4 = sum(cluster == 4),
+    cluster_5 = sum(cluster == 5)
   )
 
 # finde en spillers main cluster
@@ -117,6 +120,30 @@ player_stats <- player_stats %>%
 
 
 # Lav nogle fodboldbane plots
+for (k in 1:5) {
+  ggplot(allpasses %>% filter(cluster == k)) +
+    annotate_pitch(colour = "white", fill = "gray") +  # Soccer pitch
+    stat_density_2d_filled(aes(x = location.x, y = location.y), 
+                           alpha = 0.7, contour_var = "ndensity") +  # Normalized density
+    theme_pitch() +
+    scale_fill_viridis_d(option = "magma") +  # Corrected discrete fill scale
+    labs(title = paste("Passes Positions Heatmap - Cluster", k),
+         x = "Pitch Length", y = "Pitch Width") +
+    theme(legend.position = "right") -> p
+  
+  print(p)
+}
+
+
+ggplot(allpasses) +
+  annotate_pitch(colour = "white", fill = "gray") +  # Soccer pitch
+  stat_density_2d_filled(aes(x = location.x, y = location.y, fill = as.factor(cluster)), 
+                         alpha = 0.6, contour_var = "ndensity") +  # Normalized density for smooth contours
+  theme_pitch() +
+  scale_fill_manual(values = c("red", "blue", "green", "purple", "orange")) +  # Assign colors to clusters
+  labs(title = "Combined Smooth Heatmap of Pass Positions by Cluster",
+       x = "Pitch Length", y = "Pitch Width", fill = "Cluster") +
+  theme(legend.position = "right")
 
 
 
